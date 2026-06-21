@@ -158,7 +158,6 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
             <motion.div
               layout
               key={photo.id}
-              layoutId={`card-container-${photo.id}`}
               onClick={() => onPhotoClick(photo)}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -168,9 +167,8 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
               data-cursor="view"
               data-cursor-text="OPEN"
             >
-              {/* Image element with layoutId for transition */}
-              <motion.img
-                layoutId={`image-${photo.id}`}
+              {/* Image element */}
+              <img
                 src={photo.url}
                 alt={photo.title}
                 className="w-full h-full object-cover filter grayscale contrast-[1.1] brightness-[0.95] group-hover:scale-105 group-hover:filter-none transition-all duration-700 ease-out"
@@ -193,7 +191,7 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
               </div>
 
               {/* Decorative line frame border visible on hover */}
-              <div className="absolute inset-4 border border-white/0 group-hover:border-white/15 rounded-xl transition-all duration-500 ease-out pointer-events-none" />
+              <div className="absolute inset-4 border border-white/0 group-hover:border-white/20 rounded-xl transition-all duration-500 ease-out pointer-events-none" />
             </motion.div>
           ))}
         </AnimatePresence>

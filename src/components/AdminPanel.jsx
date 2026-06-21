@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trash2, Edit3, Plus, RotateCcw, Download, Upload, Lock, Unlock, Check, Image } from 'lucide-react';
+import ExifReader from 'exifreader';
 
 export default function AdminPanel({
   profileData,
@@ -10,10 +11,13 @@ export default function AdminPanel({
   onResetDefaults,
   onClose,
   subsections = [],
-  onUpdateSubsections
+  onUpdateSubsections,
+  authToken,
+  onLoginSuccess,
+  onLogout
 }) {
   const [passcode, setPasscode] = useState('');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const isLoggedIn = !!authToken;
   const [errorMsg, setErrorMsg] = useState('');
   const [activeTab, setActiveTab] = useState('profile');
   const [successMsg, setSuccessMsg] = useState('');
@@ -56,6 +60,12 @@ export default function AdminPanel({
   const [editingSubsectionIndex, setEditingSubsectionIndex] = useState(-1);
   const [editingSubsectionName, setEditingSubsectionName] = useState('');
 
+  // Local state for custom confirmation dialogs
+  const [photoToDelete, setPhotoToDelete] = useState(null);
+  const [subsectionToDelete, setSubsectionToDelete] = useState(null);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+
+
   // Sync profile form when profileData loads
   useEffect(() => {
     if (profileData) {
@@ -80,14 +90,25 @@ export default function AdminPanel({
   }, [profileData]);
 
   // Handle Admin Passcode Login
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (passcode === 'admin') {
-      setIsLoggedIn(true);
-      setErrorMsg('');
-    } else {
-      setErrorMsg('Invalid Passcode. Please try again.');
-      setPasscode('');
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onLoginSuccess(data.token);
+        setErrorMsg('');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setErrorMsg(data.error || 'Invalid Passcode. Please try again.');
+        setPasscode('');
+      }
+    } catch (err) {
+      setErrorMsg('Server connection failed. Please try again.');
     }
   };
 
@@ -104,14 +125,54 @@ export default function AdminPanel({
     triggerSuccess('Profile information updated successfully!');
   };
 
-  // Convert and handle direct local image uploads as Base64 strings with compression
-  const handleImageUpload = (e, targetForm) => {
+  // Convert and handle direct local image uploads as Base64 strings with compression and EXIF metadata extraction
+  const handleImageUpload = async (e, targetForm) => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 1048576 * 25) {
         alert("Warning: This file exceeds 25MB. Please choose a smaller image.");
         return;
       }
+
+      let extractedSettings = null;
+      if (targetForm === 'photo') {
+        try {
+          const tags = await ExifReader.load(file);
+          
+          let focalLength = '';
+          if (tags.FocalLength) {
+            focalLength = String(tags.FocalLength.description).replace(/\s+/g, '');
+            if (!focalLength.toLowerCase().endsWith('mm')) focalLength += 'mm';
+          }
+          
+          let aperture = '';
+          if (tags.FNumber) {
+            const desc = String(tags.FNumber.description).trim();
+            aperture = desc.toLowerCase().startsWith('f/') ? desc : `f/${desc}`;
+          }
+          
+          let shutterSpeed = '';
+          if (tags.ExposureTime) {
+            const desc = String(tags.ExposureTime.description).trim();
+            shutterSpeed = desc.endsWith('s') ? desc : `${desc}s`;
+          }
+          
+          let iso = '';
+          const isoTag = tags.ISOSpeedRatings || tags.PhotographicSensitivity;
+          if (isoTag) {
+            const desc = String(isoTag.description).trim();
+            iso = desc.toLowerCase().startsWith('iso') ? desc : `ISO ${desc}`;
+          }
+          
+          const parts = [focalLength, aperture, shutterSpeed, iso].filter(Boolean);
+          if (parts.length > 0) {
+            extractedSettings = parts.join(' • ');
+          }
+        } catch (error) {
+          console.warn('Failed to parse EXIF metadata:', error);
+        }
+      }
+
       const reader = new FileReader();
       reader.onload = (event) => {
         const img = new window.Image();
@@ -146,8 +207,14 @@ export default function AdminPanel({
             setProfileForm(prev => ({ ...prev, photoUrl: compressedDataUrl }));
             triggerSuccess('Local profile image loaded and compressed!');
           } else if (targetForm === 'photo') {
-            setPhotoForm(prev => ({ ...prev, url: compressedDataUrl }));
-            triggerSuccess('Local gallery image loaded and compressed!');
+            setPhotoForm(prev => ({ 
+              ...prev, 
+              url: compressedDataUrl,
+              ...(extractedSettings ? { settings: extractedSettings } : {})
+            }));
+            triggerSuccess(extractedSettings 
+              ? 'Local gallery image loaded with EXIF metadata!' 
+              : 'Local gallery image loaded and compressed!');
           }
         };
         img.onerror = () => {
@@ -201,7 +268,7 @@ export default function AdminPanel({
       setIsAddingNew(false);
     } else if (editingPhoto) {
       const updatedPhotos = photoList.map(p => 
-        p.id === editingPhoto.id ? { ...p, ...photoForm } : p
+        String(p.id) === String(editingPhoto.id) ? { ...p, ...photoForm } : p
       );
       onUpdatePhotos(updatedPhotos);
       triggerSuccess('Photo details updated successfully!');
@@ -211,13 +278,9 @@ export default function AdminPanel({
 
   // Delete a Photo
   const handleDeletePhoto = (photoId) => {
-    if (window.confirm('Are you sure you want to delete this photo?')) {
-      const updatedPhotos = photoList.filter(p => p.id !== photoId);
-      onUpdatePhotos(updatedPhotos);
-      triggerSuccess('Photo deleted successfully.');
-      if (editingPhoto && editingPhoto.id === photoId) {
-        setEditingPhoto(null);
-      }
+    const photo = photoList.find(p => String(p.id) === String(photoId));
+    if (photo) {
+      setPhotoToDelete(photo);
     }
   };
 
@@ -260,12 +323,7 @@ export default function AdminPanel({
 
   // Reset to Defaults Trigger
   const handleReset = () => {
-    if (window.confirm('WARNING: This will wipe all changes and restore original defaults. Proceed?')) {
-      onResetDefaults();
-      triggerSuccess('Restored site database defaults.');
-      setEditingPhoto(null);
-      setIsAddingNew(false);
-    }
+    setIsResetConfirmOpen(true);
   };
 
   // Subsection Management Handlers
@@ -309,17 +367,7 @@ export default function AdminPanel({
   };
 
   const handleDeleteSubsection = (name) => {
-    if (window.confirm(`Are you sure you want to delete the subsection "${name}"? Existing photos in this subsection will have their category cleared.`)) {
-      const updated = subsections.filter(s => s !== name);
-      onUpdateSubsections(updated);
-      
-      const updatedPhotos = photoList.map(photo => 
-        photo.category === name ? { ...photo, category: '' } : photo
-      );
-      onUpdatePhotos(updatedPhotos);
-      
-      triggerSuccess(`Subsection "${name}" deleted.`);
-    }
+    setSubsectionToDelete(name);
   };
 
   const handleBulkImageUpload = (e, category) => {
@@ -336,62 +384,151 @@ export default function AdminPanel({
     let processedCount = 0;
     
     validFiles.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new window.Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 1200;
-          const MAX_HEIGHT = 1200;
-          let width = img.width;
-          let height = img.height;
-          
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
-          const title = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-          
-          loadedPhotos.push({
-            title: title,
-            category: category,
-            location: profileData.location || "Available Worldwide",
-            url: compressedDataUrl,
-            sizeClass: 'md:col-span-1 md:row-span-1',
-            settings: '50mm • f/2.0 • 1/500s • ISO 100'
-          });
-          
-          processedCount++;
-          if (processedCount === validFiles.length) {
-            let currentPhotos = [...photoList];
-            let startId = currentPhotos.length > 0 ? Math.max(...currentPhotos.map(p => p.id)) + 1 : 1;
+      ExifReader.load(file).then(tags => {
+        let focalLength = '';
+        if (tags.FocalLength) {
+          focalLength = String(tags.FocalLength.description).replace(/\s+/g, '');
+          if (!focalLength.toLowerCase().endsWith('mm')) focalLength += 'mm';
+        }
+        
+        let aperture = '';
+        if (tags.FNumber) {
+          const desc = String(tags.FNumber.description).trim();
+          aperture = desc.toLowerCase().startsWith('f/') ? desc : `f/${desc}`;
+        }
+        
+        let shutterSpeed = '';
+        if (tags.ExposureTime) {
+          const desc = String(tags.ExposureTime.description).trim();
+          shutterSpeed = desc.endsWith('s') ? desc : `${desc}s`;
+        }
+        
+        let iso = '';
+        const isoTag = tags.ISOSpeedRatings || tags.PhotographicSensitivity;
+        if (isoTag) {
+          const desc = String(isoTag.description).trim();
+          iso = desc.toLowerCase().startsWith('iso') ? desc : `ISO ${desc}`;
+        }
+        
+        const parts = [focalLength, aperture, shutterSpeed, iso].filter(Boolean);
+        const settings = parts.length > 0 ? parts.join(' • ') : '50mm • f/2.0 • 1/500s • ISO 100';
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new window.Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 1200;
+            const MAX_HEIGHT = 1200;
+            let width = img.width;
+            let height = img.height;
             
-            const newPhotosWithIds = loadedPhotos.map((p, idx) => ({
-              id: startId + idx,
-              ...p
-            }));
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width *= MAX_HEIGHT / height;
+                height = MAX_HEIGHT;
+              }
+            }
             
-            onUpdatePhotos([...currentPhotos, ...newPhotosWithIds]);
-            triggerSuccess(`Successfully uploaded and compressed ${newPhotosWithIds.length} images into "${category}"!`);
-          }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+            const title = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+            
+            loadedPhotos.push({
+              title: title,
+              category: category,
+              location: profileData.location || "Available Worldwide",
+              url: compressedDataUrl,
+              sizeClass: 'md:col-span-1 md:row-span-1',
+              settings: settings
+            });
+            
+            processedCount++;
+            if (processedCount === validFiles.length) {
+              let currentPhotos = [...photoList];
+              let startId = currentPhotos.length > 0 ? Math.max(...currentPhotos.map(p => p.id)) + 1 : 1;
+              
+              const newPhotosWithIds = loadedPhotos.map((p, idx) => ({
+                id: startId + idx,
+                ...p
+              }));
+              
+              onUpdatePhotos([...currentPhotos, ...newPhotosWithIds]);
+              triggerSuccess(`Successfully uploaded and compressed ${newPhotosWithIds.length} images into "${category}"!`);
+            }
+          };
+          img.src = event.target.result;
         };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
+        reader.readAsDataURL(file);
+      }).catch(err => {
+        console.warn('Failed to parse EXIF metadata for file:', file.name, err);
+        const settings = '50mm • f/2.0 • 1/500s • ISO 100';
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new window.Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 1200;
+            const MAX_HEIGHT = 1200;
+            let width = img.width;
+            let height = img.height;
+            
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width *= MAX_HEIGHT / height;
+                height = MAX_HEIGHT;
+              }
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+            const title = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+            
+            loadedPhotos.push({
+              title: title,
+              category: category,
+              location: profileData.location || "Available Worldwide",
+              url: compressedDataUrl,
+              sizeClass: 'md:col-span-1 md:row-span-1',
+              settings: settings
+            });
+            
+            processedCount++;
+            if (processedCount === validFiles.length) {
+              let currentPhotos = [...photoList];
+              let startId = currentPhotos.length > 0 ? Math.max(...currentPhotos.map(p => p.id)) + 1 : 1;
+              
+              const newPhotosWithIds = loadedPhotos.map((p, idx) => ({
+                id: startId + idx,
+                ...p
+              }));
+              
+              onUpdatePhotos([...currentPhotos, ...newPhotosWithIds]);
+              triggerSuccess(`Successfully uploaded and compressed ${newPhotosWithIds.length} images into "${category}"!`);
+            }
+          };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
     });
   };
 
@@ -503,13 +640,22 @@ export default function AdminPanel({
                 </nav>
               </div>
 
-              <button
-                onClick={onClose}
-                className="hidden md:flex items-center space-x-2 text-xs uppercase tracking-widest text-[#8c8c8c] hover:text-white py-2 transition-colors border-t border-white/5 pt-4"
-              >
-                <X className="w-4 h-4" />
-                <span>Exit Console</span>
-              </button>
+              <div className="hidden md:flex flex-col gap-2 border-t border-white/5 pt-4">
+                <button
+                  onClick={onClose}
+                  className="flex items-center space-x-2 text-xs uppercase tracking-widest text-[#8c8c8c] hover:text-white py-2 transition-colors w-full text-left"
+                >
+                  <X className="w-4 h-4" />
+                  <span>Exit Console</span>
+                </button>
+                <button
+                  onClick={onLogout}
+                  className="flex items-center space-x-2 text-xs uppercase tracking-widest text-rose-500 hover:text-rose-400 py-2 transition-colors w-full text-left"
+                >
+                  <Lock className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
             </div>
 
             {/* Core Working Area */}
@@ -1145,16 +1291,156 @@ export default function AdminPanel({
                 )}
               </div>
 
-              {/* Mobile Exit Console Link */}
-              <button
-                onClick={onClose}
-                className="flex md:hidden items-center justify-center space-x-2 text-xs uppercase tracking-widest text-[#8c8c8c] hover:text-white py-3 border-t border-white/10 mt-8 w-full"
-              >
-                <X className="w-4 h-4" />
-                <span>Exit Admin Console</span>
-              </button>
+              {/* Mobile Exit & Logout Links */}
+              <div className="flex flex-col gap-3 border-t border-white/10 mt-8 pt-4 w-full">
+                <button
+                  onClick={onClose}
+                  className="flex md:hidden items-center justify-center space-x-2 text-xs uppercase tracking-widest text-[#8c8c8c] hover:text-white py-3 w-full"
+                >
+                  <X className="w-4 h-4" />
+                  <span>Exit Admin Console</span>
+                </button>
+                <button
+                  onClick={onLogout}
+                  className="flex md:hidden items-center justify-center space-x-2 text-xs uppercase tracking-widest text-rose-500 hover:text-rose-400 py-3 w-full"
+                >
+                  <Lock className="w-4 h-4" />
+                  <span>Logout Admin</span>
+                </button>
+              </div>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Custom Confirmation Modals */}
+      <AnimatePresence>
+        {photoToDelete && (
+          <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-neutral-950 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6"
+            >
+              <div className="space-y-2">
+                <h3 className="font-display text-lg font-bold text-white uppercase tracking-wider">Confirm Deletion</h3>
+                <p className="text-xs text-[#8c8c8c] leading-relaxed">
+                  Are you sure you want to permanently delete the photo <strong className="text-white">"{photoToDelete.title}"</strong>? This action cannot be undone.
+                </p>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    const updatedPhotos = photoList.filter(p => String(p.id) !== String(photoToDelete.id));
+                    onUpdatePhotos(updatedPhotos);
+                    triggerSuccess('Photo deleted successfully.');
+                    if (editingPhoto && String(editingPhoto.id) === String(photoToDelete.id)) {
+                      setEditingPhoto(null);
+                    }
+                    setPhotoToDelete(null);
+                  }}
+                  className="flex-1 bg-rose-600 hover:bg-rose-500 text-white py-3 rounded-full font-bold uppercase tracking-widest text-xs transition-colors cursor-pointer animate-none"
+                >
+                  Delete Photo
+                </button>
+                <button
+                  onClick={() => setPhotoToDelete(null)}
+                  className="flex-1 border border-white/10 hover:border-white text-white py-3 rounded-full font-bold uppercase tracking-widest text-xs transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {subsectionToDelete && (
+          <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-neutral-950 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6"
+            >
+              <div className="space-y-2">
+                <h3 className="font-display text-lg font-bold text-white uppercase tracking-wider">Delete Subsection</h3>
+                <p className="text-xs text-[#8c8c8c] leading-relaxed">
+                  Are you sure you want to delete the subsection <strong className="text-white">"{subsectionToDelete}"</strong>? Existing photos in this subsection will have their category cleared.
+                </p>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    const updated = subsections.filter(s => s !== subsectionToDelete);
+                    onUpdateSubsections(updated);
+                    
+                    const updatedPhotos = photoList.map(photo => 
+                      photo.category === subsectionToDelete ? { ...photo, category: '' } : photo
+                    );
+                    onUpdatePhotos(updatedPhotos);
+                    
+                    triggerSuccess(`Subsection "${subsectionToDelete}" deleted.`);
+                    setSubsectionToDelete(null);
+                  }}
+                  className="flex-1 bg-rose-600 hover:bg-rose-500 text-white py-3 rounded-full font-bold uppercase tracking-widest text-xs transition-colors cursor-pointer"
+                >
+                  Delete Subsection
+                </button>
+                <button
+                  onClick={() => setSubsectionToDelete(null)}
+                  className="flex-1 border border-white/10 hover:border-white text-white py-3 rounded-full font-bold uppercase tracking-widest text-xs transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isResetConfirmOpen && (
+          <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-neutral-950 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6"
+            >
+              <div className="space-y-2">
+                <h3 className="font-display text-lg font-bold text-rose-500 uppercase tracking-wider">Restore Defaults</h3>
+                <p className="text-xs text-[#8c8c8c] leading-relaxed">
+                  WARNING: This will wipe all custom changes and restore original defaults. Are you sure you want to proceed?
+                </p>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    onResetDefaults();
+                    triggerSuccess('Restored site database defaults.');
+                    setEditingPhoto(null);
+                    setIsAddingNew(false);
+                    setIsResetConfirmOpen(false);
+                  }}
+                  className="flex-1 bg-rose-600 hover:bg-rose-500 text-white py-3 rounded-full font-bold uppercase tracking-widest text-xs transition-colors cursor-pointer"
+                >
+                  Restore Defaults
+                </button>
+                <button
+                  onClick={() => setIsResetConfirmOpen(false)}
+                  className="flex-1 border border-white/10 hover:border-white text-white py-3 rounded-full font-bold uppercase tracking-widest text-xs transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

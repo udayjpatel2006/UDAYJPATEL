@@ -60,11 +60,8 @@ export default function Hero({ profileData = {} }) {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="relative w-full min-h-[90vh] bg-cover bg-center"
-      style={{ backgroundImage: `url(${heroBg})` }}
+      className="relative w-full min-h-[90vh] bg-transparent"
     >
-      {/* Heavy dark overlay for text legibility */}
-      <div className="absolute inset-0 bg-black/80" />
 
       <div className="relative z-10 w-full max-w-7xl mx-auto px-6 pt-10 pb-16 md:py-24 flex flex-col justify-between min-h-[90vh]">
         {/* Top Navbar */}

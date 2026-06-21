@@ -83,14 +83,15 @@ export default function Lightbox({ photo, onClose, onPrev, onNext }) {
         
         {/* Animated Card Container */}
         <motion.div
-          layoutId={`card-container-${photo.id}`}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
           className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 flex flex-col md:flex-row shadow-2xl"
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         >
           {/* Left Side: Photo Frame */}
           <div className="relative flex-1 bg-black flex items-center justify-center h-[50vh] md:h-[65vh]">
-            <motion.img
-              layoutId={`image-${photo.id}`}
+            <img
               src={photo.url}
               alt={photo.title}
               className="w-full h-full object-contain filter contrast-[1.05]"

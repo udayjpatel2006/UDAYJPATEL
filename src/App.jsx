@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, Sparkles, Send, Lock } from 'lucide-react';
-import LeafBackground from './components/LeafBackground';
 import Hero from './components/Hero';
 import CinematicTextReveal from './components/CinematicTextReveal';
 import PhotoGrid, { PHOTO_DATA } from './components/PhotoGrid';
 import Lightbox from './components/Lightbox';
 import AdminPanel from './components/AdminPanel';
+import CustomCursor from './components/CustomCursor';
 import profileImg from '../imgs/20260305_121542.jpg';
 
 const DEFAULT_PROFILE = {
@@ -32,6 +32,49 @@ export default function App() {
   const [photoList, setPhotoList] = useState(PHOTO_DATA);
   const [subsections, setSubsections] = useState(["Landscapes", "Sunsets", "Portraits", "Streets"]);
   const [isLoading, setIsLoading] = useState(true);
+  const [authToken, setAuthToken] = useState(() => sessionStorage.getItem('admin_token') || '');
+
+  const handleLogout = () => {
+    setAuthToken('');
+    sessionStorage.removeItem('admin_token');
+  };
+
+  const [inquiryForm, setInquiryForm] = useState({ name: '', email: '', message: '' });
+  const [inquiryStatus, setInquiryStatus] = useState({ submitting: false, success: false, error: null });
+
+  const handleInquirySubmit = async (e) => {
+    e.preventDefault();
+    setInquiryStatus({ submitting: true, success: false, error: null });
+    try {
+      const res = await fetch('/api/inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: inquiryForm.name,
+          email: inquiryForm.email,
+          message: inquiryForm.message
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Something went wrong');
+      }
+      setInquiryStatus({ submitting: false, success: true, error: null });
+      setInquiryForm({ name: '', email: '', message: '' });
+      setTimeout(() => {
+        setInquiryStatus(prev => ({ ...prev, success: false }));
+      }, 6000);
+    } catch (err) {
+      console.error('[ERROR] Failed to submit inquiry:', err);
+      setInquiryStatus({ submitting: false, success: false, error: err.message });
+    }
+  };
+
+  const getAuthHeaders = () => ({
+    'Content-Type': 'application/json',
+    ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+  });
+
 
   useEffect(() => {
     const loadData = async () => {
@@ -146,9 +189,14 @@ export default function App() {
     try {
       const res = await fetch('/api/profile', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(newData)
       });
+      if (res.status === 401) {
+        handleLogout();
+        alert('Session expired or unauthorized. Please log in again.');
+        return;
+      }
       if (!res.ok) throw new Error('Backend responded with HTTP error status: ' + res.status);
       console.log('[LOG] Profile changes saved successfully to backend SQLite database.');
     } catch (err) {
@@ -168,9 +216,14 @@ export default function App() {
     try {
       const res = await fetch('/api/photos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(newList)
       });
+      if (res.status === 401) {
+        handleLogout();
+        alert('Session expired or unauthorized. Please log in again.');
+        return;
+      }
       if (!res.ok) throw new Error('Backend responded with HTTP error status: ' + res.status);
       console.log('[LOG] Photos collection synced successfully with backend SQLite database.');
     } catch (err) {
@@ -190,9 +243,14 @@ export default function App() {
     try {
       const res = await fetch('/api/subsections', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(newSubsections)
       });
+      if (res.status === 401) {
+        handleLogout();
+        alert('Session expired or unauthorized. Please log in again.');
+        return;
+      }
       if (!res.ok) throw new Error('Backend responded with HTTP error status: ' + res.status);
       console.log('[LOG] Subsections synced successfully with backend SQLite database.');
     } catch (err) {
@@ -216,21 +274,26 @@ export default function App() {
     setSubsections(["Landscapes", "Sunsets", "Portraits", "Streets"]);
 
     try {
-      await fetch('/api/profile', {
+      const res1 = await fetch('/api/profile', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(DEFAULT_PROFILE)
       });
-      await fetch('/api/photos', {
+      const res2 = await fetch('/api/photos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(PHOTO_DATA)
       });
-      await fetch('/api/subsections', {
+      const res3 = await fetch('/api/subsections', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(["Landscapes", "Sunsets", "Portraits", "Streets"])
       });
+      if (res1.status === 401 || res2.status === 401 || res3.status === 401) {
+        handleLogout();
+        alert('Session expired or unauthorized. Please log in again.');
+        return;
+      }
       console.log('[LOG] Database reset to original seed defaults.');
       alert('Database restored to default values successfully.');
     } catch (err) {
@@ -291,8 +354,8 @@ export default function App() {
 
   return (
     <div className="relative min-h-screen bg-transparent text-white">
-      {/* Ambient Leaf & Color Background */}
-      <LeafBackground />
+      {/* Custom Cursor */}
+      <CustomCursor />
 
       {/* Hero Section */}
       <Hero profileData={profileData} />
@@ -383,53 +446,82 @@ export default function App() {
 
           {/* Contact form */}
           <div className="lg:col-span-7">
-            <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-2">
-                  <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold">NAME</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Enter your name"
-                    className="w-full bg-transparent border-b border-white/10 focus:border-white focus:outline-none py-3 text-sm font-light tracking-wide transition-colors duration-300"
-                    data-cursor="text"
-                    data-cursor-text="TYPE"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold">EMAIL</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="Enter your email"
-                    className="w-full bg-transparent border-b border-white/10 focus:border-white focus:outline-none py-3 text-sm font-light tracking-wide transition-colors duration-300"
-                    data-cursor="text"
-                    data-cursor-text="TYPE"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold">PROJECT DESCRIPTION</label>
-                <textarea
-                  rows={4}
-                  required
-                  placeholder="Tell us about the project scope, destinations, or adventure details"
-                  className="w-full bg-transparent border-b border-white/10 focus:border-white focus:outline-none py-3 text-sm font-light tracking-wide transition-colors duration-300 resize-none"
-                  data-cursor="text"
-                  data-cursor-text="TYPE"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="group flex items-center space-x-3 bg-white text-black px-8 py-4 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-neutral-200 transition-colors duration-300"
-                data-cursor="pointer"
+            {inquiryStatus.success ? (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="w-full h-full flex flex-col items-center justify-center text-center space-y-4 py-12 border border-white/10 rounded-2xl bg-neutral-900/50"
               >
-                <span>Send Proposal</span>
-                <Send className="w-3.5 h-3.5" />
-              </button>
-            </form>
+                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white">
+                  <Sparkles className="w-6 h-6 animate-pulse" />
+                </div>
+                <h3 className="font-display text-xl font-bold">Proposal Sent Successfully!</h3>
+                <p className="text-sm text-neutral-400 max-w-sm">
+                  Thank you for reaching out. We will review your project details and get back to you shortly.
+                </p>
+              </motion.div>
+            ) : (
+              <form onSubmit={handleInquirySubmit} className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold">NAME</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Enter your name"
+                      value={inquiryForm.name}
+                      onChange={(e) => setInquiryForm({ ...inquiryForm, name: e.target.value })}
+                      className="w-full bg-transparent border-b border-white/10 focus:border-white focus:outline-none py-3 text-sm font-light tracking-wide transition-colors duration-300"
+                      data-cursor="text"
+                      data-cursor-text="TYPE"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold">EMAIL</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="Enter your email"
+                      value={inquiryForm.email}
+                      onChange={(e) => setInquiryForm({ ...inquiryForm, email: e.target.value })}
+                      className="w-full bg-transparent border-b border-white/10 focus:border-white focus:outline-none py-3 text-sm font-light tracking-wide transition-colors duration-300"
+                      data-cursor="text"
+                      data-cursor-text="TYPE"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold">PROJECT DESCRIPTION</label>
+                  <textarea
+                    rows={4}
+                    required
+                    placeholder="Tell us about the project scope, destinations, or adventure details"
+                    value={inquiryForm.message}
+                    onChange={(e) => setInquiryForm({ ...inquiryForm, message: e.target.value })}
+                    className="w-full bg-transparent border-b border-white/10 focus:border-white focus:outline-none py-3 text-sm font-light tracking-wide transition-colors duration-300 resize-none"
+                    data-cursor="text"
+                    data-cursor-text="TYPE"
+                  />
+                </div>
+
+                {inquiryStatus.error && (
+                  <p className="text-xs text-red-500 font-semibold tracking-wide uppercase">
+                    {inquiryStatus.error}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={inquiryStatus.submitting}
+                  className="group flex items-center space-x-3 bg-white text-black px-8 py-4 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-neutral-200 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  data-cursor="pointer"
+                >
+                  <span>{inquiryStatus.submitting ? 'Sending...' : 'Send Proposal'}</span>
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </section>
@@ -479,6 +571,12 @@ export default function App() {
           onClose={closeAdmin}
           subsections={subsections}
           onUpdateSubsections={handleUpdateSubsections}
+          authToken={authToken}
+          onLoginSuccess={(token) => {
+            setAuthToken(token);
+            sessionStorage.setItem('admin_token', token);
+          }}
+          onLogout={handleLogout}
         />
       )}
     </div>

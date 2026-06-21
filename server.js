@@ -5,12 +5,60 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Enforce HTTPS middleware in production
+app.use((req, res, next) => {
+  if (req.headers['x-forwarded-proto'] && req.headers['x-forwarded-proto'] !== 'https') {
+    return res.redirect(`https://${req.headers.host}${req.url}`);
+  }
+  next();
+});
+
+// Configure Helmet with Vite-friendly Content Security Policy
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https://images.unsplash.com", "https://*.unsplash.com"],
+      connectSrc: ["'self'", "ws:", "wss:", "http:", "https:"]
+    }
+  },
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: false
+}));
+
+// Set up rate limiters
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests from this IP, please try again after 15 minutes.' }
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 login requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts from this IP, please try again after 15 minutes.' }
+});
+
+// Apply rate limiters to API routes
+app.use('/api/', generalLimiter);
+app.use('/api/login', loginLimiter);
 
 app.use(cors());
 // Set large limit to handle Base64 image payload sizes
@@ -65,6 +113,17 @@ async function initDb() {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS subsections (
       name TEXT PRIMARY KEY
+    )
+  `);
+
+  // Create inquiries table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS inquiries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      email TEXT,
+      message TEXT,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
@@ -196,6 +255,55 @@ async function initDb() {
 
 // ---------------- API ENDPOINTS ----------------
 
+// In-memory store for active session tokens mapping token -> expiration Date
+const activeSessions = new Map();
+
+// Helper to clean up expired sessions
+setInterval(() => {
+  const now = new Date();
+  for (const [token, expiry] of activeSessions.entries()) {
+    if (now > expiry) {
+      activeSessions.delete(token);
+    }
+  }
+}, 60 * 1000);
+
+// Passcode config (defaults to 'admin', can be set via env var)
+const ADMIN_PASSCODE = process.env.ADMIN_PASSCODE || 'admin';
+
+// Authentication middleware
+function requireAuth(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: Missing or invalid token format' });
+  }
+  
+  const token = authHeader.substring(7);
+  const expiry = activeSessions.get(token);
+  
+  if (!expiry || new Date() > expiry) {
+    if (expiry) activeSessions.delete(token);
+    return res.status(401).json({ error: 'Unauthorized: Session expired or invalid' });
+  }
+  
+  // Extend session duration on active use (2 hours)
+  activeSessions.set(token, new Date(Date.now() + 2 * 60 * 60 * 1000));
+  next();
+}
+
+// Admin login endpoint
+app.post('/api/login', (req, res) => {
+  const { passcode } = req.body;
+  if (passcode === ADMIN_PASSCODE) {
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiry = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    activeSessions.set(token, expiry);
+    res.json({ success: true, token });
+  } else {
+    res.status(401).json({ error: 'Invalid passcode' });
+  }
+});
+
 // Get all data (Profile, Photos, Subsections)
 app.get('/api/data', async (req, res) => {
   try {
@@ -221,7 +329,7 @@ app.get('/api/data', async (req, res) => {
 });
 
 // Update profile setting keys
-app.post('/api/profile', async (req, res) => {
+app.post('/api/profile', requireAuth, async (req, res) => {
   try {
     const profile = req.body;
     const stmt = await db.prepare('INSERT OR REPLACE INTO profile_settings (key, value) VALUES (?, ?)');
@@ -237,7 +345,7 @@ app.post('/api/profile', async (req, res) => {
 });
 
 // Sync complete photo dataset
-app.post('/api/photos', async (req, res) => {
+app.post('/api/photos', requireAuth, async (req, res) => {
   try {
     const photos = req.body;
     
@@ -264,7 +372,7 @@ app.post('/api/photos', async (req, res) => {
 });
 
 // Sync complete subsections list
-app.post('/api/subsections', async (req, res) => {
+app.post('/api/subsections', requireAuth, async (req, res) => {
   try {
     const subsections = req.body;
     await db.exec('BEGIN TRANSACTION');
@@ -284,6 +392,23 @@ app.post('/api/subsections', async (req, res) => {
   } catch (error) {
     console.error(`[ERROR] [${new Date().toISOString()}] Failed to sync subsections list:`, error);
     res.status(500).json({ error: 'Failed to save subsections list in database' });
+  }
+});
+
+// Save client proposal inquiries
+app.post('/api/inquiries', async (req, res) => {
+  try {
+    const { name, email, message } = req.body;
+    if (!name || !email || !message) {
+      return res.status(400).json({ error: 'Name, email, and message are required.' });
+    }
+    const stmt = await db.prepare('INSERT INTO inquiries (name, email, message) VALUES (?, ?, ?)');
+    await stmt.run(name, email, message);
+    await stmt.finalize();
+    res.json({ success: true, message: 'Proposal submitted successfully!' });
+  } catch (error) {
+    console.error(`[ERROR] [${new Date().toISOString()}] Failed to submit inquiry:`, error);
+    res.status(500).json({ error: 'Failed to save inquiry in database' });
   }
 });
 

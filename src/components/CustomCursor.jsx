@@ -76,28 +76,24 @@ export default function CustomCursor() {
   // Variants for cursor sizing and blend modes
   const cursorVariants = {
     default: {
-      width: 40,
-      height: 40,
-      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-      border: '1px solid rgba(255, 255, 255, 0.3)',
+      width: 50,
+      height: 50,
+      opacity: 0.85,
     },
     pointer: {
-      width: 60,
-      height: 60,
-      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-      border: '1px solid rgba(255, 255, 255, 0.8)',
+      width: 80,
+      height: 80,
+      opacity: 0.95,
     },
     view: {
-      width: 90,
-      height: 90,
-      backgroundColor: 'rgba(255, 255, 255, 1)',
-      border: '1px solid rgba(255, 255, 255, 1)',
+      width: 120,
+      height: 120,
+      opacity: 1,
     },
     text: {
-      width: 100,
-      height: 100,
-      backgroundColor: 'rgba(255, 255, 255, 1)',
-      border: '1px solid rgba(255, 255, 255, 1)',
+      width: 120,
+      height: 120,
+      opacity: 1,
     }
   };
 
@@ -121,7 +117,9 @@ export default function CustomCursor() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          mixBlendMode: isViewOrText ? 'difference' : 'normal',
+          mixBlendMode: 'normal',
+          background: 'radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0) 70%)',
+          boxShadow: '0 0 25px 5px rgba(255, 255, 255, 0.08)',
         }}
         animate={cursorType}
         variants={cursorVariants}
@@ -131,7 +129,7 @@ export default function CustomCursor() {
           <motion.span
             initial={{ opacity: 0, scale: 0.6 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-[10px] font-display font-semibold tracking-[0.2em] text-black uppercase"
+            className="text-[10px] font-display font-semibold tracking-[0.2em] text-white uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
           >
             {cursorText || 'VIEW'}
           </motion.span>
@@ -153,7 +151,8 @@ export default function CustomCursor() {
           height: 6,
           backgroundColor: '#ffffff',
           borderRadius: '50%',
-          mixBlendMode: 'difference',
+          mixBlendMode: 'normal',
+          boxShadow: '0 0 8px 2px rgba(255, 255, 255, 0.6)',
         }}
         animate={{
           scale: cursorType !== 'default' ? 0 : 1,
