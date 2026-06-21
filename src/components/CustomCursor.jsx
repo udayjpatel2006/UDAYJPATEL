@@ -67,23 +67,23 @@ export default function CustomCursor() {
   // Variants for cursor sizing and blend modes
   const cursorVariants = {
     default: {
-      width: 100,
-      height: 100,
+      width: 200,
+      height: 200,
       opacity: 0.9,
     },
     pointer: {
-      width: 150,
-      height: 150,
+      width: 300,
+      height: 300,
       opacity: 1,
     },
     view: {
-      width: 200,
-      height: 200,
+      width: 380,
+      height: 380,
       opacity: 1,
     },
     text: {
-      width: 200,
-      height: 200,
+      width: 380,
+      height: 380,
       opacity: 1,
     }
   };
@@ -107,7 +107,7 @@ export default function CustomCursor() {
         alignItems: 'center',
         justifyContent: 'center',
         mixBlendMode: 'screen',
-        background: 'radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.03) 40%, rgba(255, 255, 255, 0) 70%)',
+        background: 'radial-gradient(circle, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 40%, rgba(255, 255, 255, 0) 80%)',
       }}
       animate={cursorType}
       variants={cursorVariants}

@@ -369,15 +369,6 @@ export default function App() {
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           <div className="lg:col-span-4">
-            <motion.span 
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              className="text-xs font-semibold tracking-[0.3em] text-[#8c8c8c] uppercase block mb-3"
-            >
-              ARTIST STATEMENT
-            </motion.span>
             <h2 className="font-display text-3xl font-bold tracking-tight text-white leading-tight">
               <CinematicTextReveal text={profileData.aboutTitle || "Chasing the golden hour across distant horizons."} />
             </h2>
