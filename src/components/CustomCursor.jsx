@@ -12,7 +12,7 @@ export default function CustomCursor() {
   const mouseY = useMotionValue(-100);
 
   // Smooth spring physics configuration for lag effect
-  const springConfig = { damping: 40, stiffness: 400, mass: 0.6 };
+  const springConfig = { damping: 30, stiffness: 180, mass: 0.8 };
   const cursorX = useSpring(mouseX, springConfig);
   const cursorY = useSpring(mouseY, springConfig);
 
@@ -76,23 +76,23 @@ export default function CustomCursor() {
   // Variants for cursor sizing and blend modes
   const cursorVariants = {
     default: {
-      width: 50,
-      height: 50,
-      opacity: 0.85,
+      width: 60,
+      height: 60,
+      opacity: 0.9,
     },
     pointer: {
-      width: 80,
-      height: 80,
-      opacity: 0.95,
+      width: 90,
+      height: 90,
+      opacity: 1,
     },
     view: {
-      width: 120,
-      height: 120,
+      width: 140,
+      height: 140,
       opacity: 1,
     },
     text: {
-      width: 120,
-      height: 120,
+      width: 140,
+      height: 140,
       opacity: 1,
     }
   };
@@ -118,12 +118,12 @@ export default function CustomCursor() {
           alignItems: 'center',
           justifyContent: 'center',
           mixBlendMode: 'normal',
-          background: 'radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0) 70%)',
-          boxShadow: '0 0 25px 5px rgba(255, 255, 255, 0.08)',
+          background: 'radial-gradient(circle, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.1) 40%, rgba(255, 255, 255, 0) 70%)',
+          boxShadow: '0 0 35px 8px rgba(255, 255, 255, 0.22), inset 0 0 15px 3px rgba(255, 255, 255, 0.18)',
         }}
         animate={cursorType}
         variants={cursorVariants}
-        transition={{ type: 'spring', stiffness: 350, damping: 25, mass: 0.5 }}
+        transition={{ type: 'spring', stiffness: 220, damping: 28, mass: 0.7 }}
       >
         {isViewOrText && (
           <motion.span
