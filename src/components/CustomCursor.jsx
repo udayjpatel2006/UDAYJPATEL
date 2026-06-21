@@ -58,16 +58,12 @@ export default function CustomCursor() {
     document.addEventListener('mouseleave', handleMouseLeaveWindow);
     document.addEventListener('mouseenter', handleMouseEnterWindow);
 
-    // Hide normal cursor when custom cursor is active
-    document.documentElement.classList.add('custom-cursor-active');
-
     return () => {
       window.removeEventListener('resize', checkDevice);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseover', handleMouseOver);
       document.removeEventListener('mouseleave', handleMouseLeaveWindow);
       document.removeEventListener('mouseenter', handleMouseEnterWindow);
-      document.documentElement.classList.remove('custom-cursor-active');
     };
   }, [isMobile, isVisible, mouseX, mouseY]);
 
@@ -76,23 +72,23 @@ export default function CustomCursor() {
   // Variants for cursor sizing and blend modes
   const cursorVariants = {
     default: {
-      width: 60,
-      height: 60,
+      width: 160,
+      height: 160,
       opacity: 0.9,
     },
     pointer: {
-      width: 90,
-      height: 90,
+      width: 260,
+      height: 260,
       opacity: 1,
     },
     view: {
-      width: 140,
-      height: 140,
+      width: 320,
+      height: 320,
       opacity: 1,
     },
     text: {
-      width: 140,
-      height: 140,
+      width: 320,
+      height: 320,
       opacity: 1,
     }
   };
@@ -100,65 +96,38 @@ export default function CustomCursor() {
   const isViewOrText = cursorType === 'view' || cursorType === 'text';
 
   return (
-    <>
-      {/* Outer Spring Cursor Ring */}
-      <motion.div
-        style={{
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          translateX: cursorX,
-          translateY: cursorY,
-          x: '-50%',
-          y: '-50%',
-          pointerEvents: 'none',
-          zIndex: 9999,
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          mixBlendMode: 'normal',
-          background: 'radial-gradient(circle, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.1) 40%, rgba(255, 255, 255, 0) 70%)',
-          boxShadow: '0 0 35px 8px rgba(255, 255, 255, 0.22), inset 0 0 15px 3px rgba(255, 255, 255, 0.18)',
-        }}
-        animate={cursorType}
-        variants={cursorVariants}
-        transition={{ type: 'spring', stiffness: 220, damping: 28, mass: 0.7 }}
-      >
-        {isViewOrText && (
-          <motion.span
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-[10px] font-display font-semibold tracking-[0.2em] text-white uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
-          >
-            {cursorText || 'VIEW'}
-          </motion.span>
-        )}
-      </motion.div>
-
-      {/* Tiny inner dot following exactly with no lag */}
-      <motion.div
-        style={{
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          x: mouseX,
-          y: mouseY,
-          transform: 'translate(-50%, -50%)',
-          pointerEvents: 'none',
-          zIndex: 10000,
-          width: 6,
-          height: 6,
-          backgroundColor: '#ffffff',
-          borderRadius: '50%',
-          mixBlendMode: 'normal',
-          boxShadow: '0 0 8px 2px rgba(255, 255, 255, 0.6)',
-        }}
-        animate={{
-          scale: cursorType !== 'default' ? 0 : 1,
-        }}
-        transition={{ duration: 0.2 }}
-      />
-    </>
+    <motion.div
+      style={{
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        translateX: cursorX,
+        translateY: cursorY,
+        x: '-50%',
+        y: '-50%',
+        pointerEvents: 'none',
+        zIndex: 9999,
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        mixBlendMode: 'normal',
+        background: 'radial-gradient(circle, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0.02) 65%, rgba(255, 255, 255, 0) 85%)',
+        boxShadow: '0 0 60px 20px rgba(255, 255, 255, 0.22), inset 0 0 25px 10px rgba(255, 255, 255, 0.15)',
+      }}
+      animate={cursorType}
+      variants={cursorVariants}
+      transition={{ type: 'spring', stiffness: 220, damping: 28, mass: 0.7 }}
+    >
+      {isViewOrText && (
+        <motion.span
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-[10px] font-display font-semibold tracking-[0.2em] text-white uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        >
+          {cursorText || 'VIEW'}
+        </motion.span>
+      )}
+    </motion.div>
   );
 }

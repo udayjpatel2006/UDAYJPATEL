@@ -66,11 +66,3 @@ body .text-black.rounded-full {
   color: #ffffff !important;
 }
 
-/* Hide default cursor on desktop when custom cursor is active */
-@media (min-width: 1024px) {
-  .custom-cursor-active,
-  .custom-cursor-active * {
-    cursor: none !important;
-  }
-}
-
