@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion, useMotionValue, useSpring } from 'framer-motion';
+import { motion, useMotionValue } from 'framer-motion';
 
 export default function CustomCursor() {
   const [cursorType, setCursorType] = useState('default');
@@ -10,11 +10,6 @@ export default function CustomCursor() {
   // Mouse coordinates tracking
   const mouseX = useMotionValue(-100);
   const mouseY = useMotionValue(-100);
-
-  // Smooth spring physics configuration for lag effect
-  const springConfig = { damping: 30, stiffness: 180, mass: 0.8 };
-  const cursorX = useSpring(mouseX, springConfig);
-  const cursorY = useSpring(mouseY, springConfig);
 
   useEffect(() => {
     // Check if it's a touch device or small screen
@@ -101,8 +96,8 @@ export default function CustomCursor() {
         position: 'fixed',
         left: 0,
         top: 0,
-        translateX: cursorX,
-        translateY: cursorY,
+        translateX: mouseX,
+        translateY: mouseY,
         x: '-50%',
         y: '-50%',
         pointerEvents: 'none',
@@ -112,8 +107,7 @@ export default function CustomCursor() {
         alignItems: 'center',
         justifyContent: 'center',
         mixBlendMode: 'normal',
-        background: 'radial-gradient(circle, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0.02) 65%, rgba(255, 255, 255, 0) 85%)',
-        boxShadow: '0 0 60px 20px rgba(255, 255, 255, 0.22), inset 0 0 25px 10px rgba(255, 255, 255, 0.15)',
+        background: 'radial-gradient(circle, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 80%)',
       }}
       animate={cursorType}
       variants={cursorVariants}
