@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CinematicTextReveal from './CinematicTextReveal';
+import Watermark from './Watermark';
 
 // Curated high-end travel and adventure photography dataset
 const PHOTO_DATA = [
@@ -80,6 +81,19 @@ const PHOTO_DATA = [
 
 export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profileData = {}, subsections = [] }) {
   const [activeCategory, setActiveCategory] = useState("All");
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const isTouch = window.matchMedia('(pointer: coarse)').matches;
+      const isSmallScreen = window.innerWidth < 1024;
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(isTouch || isSmallScreen || isMobileUA);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const categories = useMemo(() => {
     return ["All", ...subsections];
@@ -150,29 +164,38 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
 
       {/* Bento Grid */}
       <motion.div 
-        layout
+        layout={!isMobile ? "position" : false}
         className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-auto"
       >
         <AnimatePresence mode="popLayout">
           {filteredPhotos.map((photo) => (
             <motion.div
-              layout
+              layout={!isMobile ? "position" : false}
               key={photo.id}
               onClick={() => onPhotoClick(photo)}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              style={{ willChange: 'transform, opacity' }}
               className={`relative overflow-hidden rounded-2xl border border-white/10 group cursor-pointer ${getCardClasses(photo.sizeClass)}`}
               data-cursor="view"
               data-cursor-text="OPEN"
             >
-              {/* Image element */}
-              <img
-                src={photo.url}
-                alt={photo.title}
-                className="w-full h-full object-cover filter grayscale contrast-[1.1] brightness-[0.95] group-hover:scale-105 group-hover:filter-none transition-all duration-700 ease-out"
-              />
+              {/* Image element with watermark and overlay protection */}
+              <div className="relative w-full h-full overflow-hidden select-none">
+                <img
+                  src={photo.url}
+                  alt={photo.title}
+                  loading="lazy"
+                  className="w-full h-full object-cover filter grayscale contrast-[1.1] brightness-[0.95] gallery-image gallery-image-hover-effect pointer-events-none select-none"
+                />
+                {/* Transparent protection overlay to block save actions */}
+                <div className="absolute inset-0 z-10 bg-transparent pointer-events-auto" />
+                
+                {/* Subtle dynamic watermark */}
+                <Watermark text={profileData.name} position="bottom-right" opacity={0.25} />
+              </div>
 
               {/* Hover Dark Vignette overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 ease-out pointer-events-none" />

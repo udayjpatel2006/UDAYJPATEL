@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, ArrowLeft, ArrowRight, MapPin, Compass, Eye } from 'lucide-react';
+import Watermark from './Watermark';
 
-export default function Lightbox({ photo, onClose, onPrev, onNext }) {
+export default function Lightbox({ photo, onClose, onPrev, onNext, artistName = "UDAYJPATEL" }) {
   useEffect(() => {
     // Prevent background scrolling while open
     document.body.style.overflow = 'hidden';
@@ -30,9 +31,10 @@ export default function Lightbox({ photo, onClose, onPrev, onNext }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.4 }}
+        transition={{ duration: 0.25 }}
         onClick={onClose}
-        className="absolute inset-0 bg-black/90 backdrop-blur-xl"
+        className="absolute inset-0 bg-black/90 backdrop-blur-sm md:backdrop-blur-md"
+        style={{ willChange: 'opacity' }}
         data-cursor="pointer"
       />
 
@@ -86,24 +88,33 @@ export default function Lightbox({ photo, onClose, onPrev, onNext }) {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          style={{ willChange: 'transform, opacity' }}
           className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 flex flex-col md:flex-row shadow-2xl"
         >
-          {/* Left Side: Photo Frame */}
-          <div className="relative flex-1 bg-black flex items-center justify-center h-[50vh] md:h-[65vh]">
-            <img
-              src={photo.url}
-              alt={photo.title}
-              className="w-full h-full object-contain filter contrast-[1.05]"
-            />
+          {/* Left Side: Photo Frame with watermark and overlay protection */}
+          <div className="relative flex-1 bg-black flex items-center justify-center h-[50vh] md:h-[65vh] overflow-hidden select-none">
+            <div className="relative inline-block max-h-full max-w-full">
+              <img
+                src={photo.url}
+                alt={photo.title}
+                className="max-h-[50vh] md:max-h-[65vh] max-w-full object-contain block filter contrast-[1.05] pointer-events-none select-none"
+              />
+              {/* Transparent protection overlay */}
+              <div className="absolute inset-0 z-10 bg-transparent pointer-events-auto" />
+              
+              {/* Bottom-right soft watermark overlay */}
+              <Watermark text={artistName} position="bottom-right" opacity={0.25} size="text-xs" />
+            </div>
           </div>
 
           {/* Right Side: Editorial Sidebar */}
           <motion.div 
-            initial={{ opacity: 0, x: 30 }}
+            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 30 }}
-            transition={{ delay: 0.1, duration: 0.4 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ delay: 0.05, duration: 0.25 }}
+            style={{ willChange: 'transform, opacity' }}
             className="w-full md:w-80 p-8 flex flex-col justify-between bg-neutral-950 border-t md:border-t-0 md:border-l border-white/10"
           >
             {/* Upper details */}

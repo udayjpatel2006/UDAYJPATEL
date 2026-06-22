@@ -12,11 +12,12 @@ export default function CustomCursor() {
   const mouseY = useMotionValue(-100);
 
   useEffect(() => {
-    // Check if it's a touch device or small screen
+    // Check if it's a touch device, mobile browser, or small screen
     const checkDevice = () => {
       const isTouch = window.matchMedia('(pointer: coarse)').matches;
       const isSmallScreen = window.innerWidth < 1024;
-      setIsMobile(isTouch || isSmallScreen);
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(isTouch || isSmallScreen || isMobileUA);
     };
 
     checkDevice();
@@ -67,23 +68,19 @@ export default function CustomCursor() {
   // Variants for cursor sizing and blend modes
   const cursorVariants = {
     default: {
-      width: 350,
-      height: 350,
+      scale: 1,
       opacity: 0.95,
     },
     pointer: {
-      width: 480,
-      height: 480,
+      scale: 1.37,
       opacity: 1,
     },
     view: {
-      width: 550,
-      height: 550,
+      scale: 1.57,
       opacity: 1,
     },
     text: {
-      width: 550,
-      height: 550,
+      scale: 1.57,
       opacity: 1,
     }
   };
@@ -96,6 +93,8 @@ export default function CustomCursor() {
         position: 'fixed',
         left: 0,
         top: 0,
+        width: 350,
+        height: 350,
         translateX: mouseX,
         translateY: mouseY,
         x: '-50%',
@@ -108,6 +107,7 @@ export default function CustomCursor() {
         justifyContent: 'center',
         mixBlendMode: 'screen',
         background: 'radial-gradient(circle, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.08) 35%, rgba(255, 255, 255, 0.01) 65%, rgba(255, 255, 255, 0) 85%)',
+        willChange: 'transform',
       }}
       animate={cursorType}
       variants={cursorVariants}

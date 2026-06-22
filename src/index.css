@@ -66,3 +66,28 @@ body .text-black.rounded-full {
   color: #ffffff !important;
 }
 
+/* Image protection rules: blocks user-dragging, selection, and direct pointer events on img tags */
+/* Note: Prevents casual downloading/saving but technically screenshots or source inspection can still get the asset. */
+img {
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+  pointer-events: none !important;
+}
+
+/* Gallery image performance optimizations */
+.gallery-image {
+  transform: scale(1);
+  will-change: transform, filter;
+}
+
+/* Only apply smooth filter and scale transitions on devices with true hover support (desktops) */
+@media (hover: hover) {
+  .gallery-image {
+    transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), filter 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .group:hover .gallery-image-hover-effect {
+    transform: scale(1.05);
+    filter: none !important;
+  }
+}
+

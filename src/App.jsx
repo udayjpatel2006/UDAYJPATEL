@@ -174,6 +174,28 @@ export default function App() {
     loadData();
   }, []);
 
+  // Global image protection handlers (prevents right-clicks and dragging)
+  // Note: Client-side protection prevents casual saving but does not protect against screenshots or network tab extraction.
+  useEffect(() => {
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+    };
+
+    const handleDragStart = (e) => {
+      if (e.target.tagName === 'IMG') {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('dragstart', handleDragStart);
+
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('dragstart', handleDragStart);
+    };
+  }, []);
+
   const handleUpdateProfile = async (newData) => {
     // 1. Instantly update React state for latency-free frontend response
     setProfileData(newData);
@@ -547,6 +569,7 @@ export default function App() {
             onClose={() => setSelectedPhoto(null)}
             onPrev={handlePrev}
             onNext={handleNext}
+            artistName={profileData.name}
           />
         )}
       </AnimatePresence>
