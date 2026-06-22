@@ -160,7 +160,6 @@ export default function Hero({ profileData = {} }) {
           {/* Bottom indicator */}
           <div className="absolute bottom-6 left-6 right-6 z-20 flex justify-between items-end">
             <div>
-              <span className="text-[10px] uppercase tracking-widest font-semibold text-white/50 block">JOURNEY LOG</span>
               <span className="text-sm font-semibold tracking-wider text-white">{name} // PORTFOLIO</span>
             </div>
             <div className="flex items-center space-x-2 text-[10px] uppercase tracking-widest text-white/50">
