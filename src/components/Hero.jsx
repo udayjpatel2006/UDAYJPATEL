@@ -145,17 +145,19 @@ export default function Hero({ profileData = {} }) {
           {/* Decorative frame overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent z-10 pointer-events-none" />
           
-          <motion.img 
-            variants={imageVariants}
-            src={photoUrl} 
-            alt={`${name} — Profile`} 
-            className="w-full h-full object-cover filter grayscale contrast-[1.1] brightness-[0.95] group-hover:scale-105 group-hover:filter-none transition-all duration-700 ease-out object-center pointer-events-none select-none"
-            data-cursor="view"
-            data-cursor-text="EXPLORE"
-          />
+              <motion.img 
+                variants={imageVariants}
+                src={photoUrl} 
+                alt={`${name} — Profile`} 
+                className="w-full h-full object-cover filter grayscale contrast-[1.1] brightness-[0.95] group-hover:scale-105 group-hover:filter-none transition-all duration-700 ease-out object-center pointer-events-none select-none"
+              />
 
-          {/* Transparent protection overlay to block save/drag */}
-          <div className="absolute inset-0 z-11 bg-transparent pointer-events-auto" />
+              {/* Transparent protection overlay to block save/drag */}
+              <div 
+                className="absolute inset-0 z-11 bg-transparent pointer-events-auto"
+                data-cursor="view"
+                data-cursor-text="EXPLORE"
+              />
 
           {/* Bottom indicator */}
           <div className="absolute bottom-6 left-6 right-6 z-20 flex justify-between items-end">

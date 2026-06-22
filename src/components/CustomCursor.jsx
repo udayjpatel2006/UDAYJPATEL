@@ -69,19 +69,19 @@ export default function CustomCursor() {
   const cursorVariants = {
     default: {
       scale: 1,
-      opacity: 0.95,
+      opacity: 0.75,
     },
     pointer: {
       scale: 1.37,
-      opacity: 1,
+      opacity: 0.8,
     },
     view: {
       scale: 0.5,
-      opacity: 0.3,
+      opacity: 0.2,
     },
     text: {
       scale: 0.5,
-      opacity: 0.3,
+      opacity: 0.2,
     }
   };
 
@@ -106,7 +106,7 @@ export default function CustomCursor() {
         alignItems: 'center',
         justifyContent: 'center',
         mixBlendMode: 'screen',
-        background: 'radial-gradient(circle, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.12) 40%, rgba(255, 255, 255, 0.02) 70%, rgba(255, 255, 255, 0) 90%)',
+        background: 'radial-gradient(circle, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.08) 40%, rgba(255, 255, 255, 0.01) 70%, rgba(255, 255, 255, 0) 90%)',
         willChange: 'transform',
       }}
       animate={cursorType}
