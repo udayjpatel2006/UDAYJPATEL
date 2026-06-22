@@ -76,12 +76,12 @@ export default function CustomCursor() {
       opacity: 1,
     },
     view: {
-      scale: 1.57,
-      opacity: 1,
+      scale: 0.5,
+      opacity: 0.3,
     },
     text: {
-      scale: 1.57,
-      opacity: 1,
+      scale: 0.5,
+      opacity: 0.3,
     }
   };
 
@@ -115,8 +115,8 @@ export default function CustomCursor() {
     >
       {isViewOrText && (
         <motion.span
-          initial={{ opacity: 0, scale: 0.6 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, scale: 1.2 }}
+          animate={{ opacity: 1, scale: 2 }}
           className="text-[10px] font-display font-semibold tracking-[0.2em] text-white uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
         >
           {cursorText || 'VIEW'}
