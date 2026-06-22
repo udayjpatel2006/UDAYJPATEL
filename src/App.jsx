@@ -546,19 +546,7 @@ export default function App() {
           <a href="#gallery" className="hover:text-white transition-colors" data-cursor="pointer">JOURNEYS</a>
           <a href="#about" className="hover:text-white transition-colors" data-cursor="pointer">STORY</a>
           <a href="#contact" className="hover:text-white transition-colors" data-cursor="pointer">CONTACT</a>
-          <button 
-            onClick={openAdmin} 
-            className="hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
-            data-cursor="pointer"
-          >
-            <Lock className="w-3.5 h-3.5" />
-            <span>ADMIN</span>
-          </button>
         </div>
-        <span className="flex items-center gap-1.5">
-          <Sparkles className="w-3 h-3 text-white/50" />
-          <span>CAPTURED IN MOTION</span>
-        </span>
       </footer>
 
       {/* Lightbox Pop-up with Shared Layout Animation */}
