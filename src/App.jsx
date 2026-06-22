@@ -24,7 +24,9 @@ const DEFAULT_PROFILE = {
   aboutPara2: "By embracing rich color grading, warm shadows, and authentic moments, each image becomes an invitation to wander. Through {name}'s lens, we traverse the boundary between the familiar and the wild, celebrating the rich storytelling built directly into the fabric of our world.",
   inquiriesTitle: "Let's capture the next adventure.",
   galleryTitle: "Visual Archive",
-  gallerySubtitle: "Curated collection of frames"
+  gallerySubtitle: "Curated collection of frames",
+  highlightsTitle: "Featured Highlights",
+  highlightsSubtitle: "Curated Selection"
 };
 
 export default function App() {

@@ -105,9 +105,20 @@ async function initDb() {
       location TEXT,
       url TEXT,
       sizeClass TEXT,
-      settings TEXT
+      settings TEXT,
+      isHighlight INTEGER DEFAULT 0
     )
   `);
+
+  // Migrate existing databases to add isHighlight if it doesn't exist
+  try {
+    await db.exec(`ALTER TABLE photos ADD COLUMN isHighlight INTEGER DEFAULT 0`);
+    console.log('[LOG] Migration: Added isHighlight column to photos table');
+  } catch (err) {
+    if (!err.message.includes('duplicate column name') && !err.message.includes('already exists')) {
+      console.error('[ERROR] Failed to run migration for photos table (isHighlight):', err);
+    }
+  }
 
   // Create subsections table
   await db.exec(`
@@ -146,7 +157,9 @@ async function initDb() {
       aboutPara2: "By embracing rich color grading, warm shadows, and authentic moments, each image becomes an invitation to wander. Through {name}'s lens, we traverse the boundary between the familiar and the wild, celebrating the rich storytelling built directly into the fabric of our world.",
       inquiriesTitle: "Let's capture the next adventure.",
       galleryTitle: "Visual Archive",
-      gallerySubtitle: "Curated collection of frames"
+      gallerySubtitle: "Curated collection of frames",
+      highlightsTitle: "Featured Highlights",
+      highlightsSubtitle: "Curated Selection"
     };
 
     const stmt = await db.prepare('INSERT INTO profile_settings (key, value) VALUES (?, ?)');
@@ -179,6 +192,7 @@ async function initDb() {
         url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop",
         sizeClass: "md:col-span-2 md:row-span-1",
         settings: "28mm • f/4.0 • 1/200s • ISO 100",
+        isHighlight: 1,
       },
       {
         id: 2,
@@ -188,6 +202,7 @@ async function initDb() {
         url: "https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200&auto=format&fit=crop",
         sizeClass: "md:col-span-1 md:row-span-2",
         settings: "35mm • f/2.0 • 1/400s • ISO 100",
+        isHighlight: 1,
       },
       {
         id: 3,
@@ -197,6 +212,7 @@ async function initDb() {
         url: "https://images.unsplash.com/photo-1488161628813-04466f872be2?q=80&w=1200&auto=format&fit=crop",
         sizeClass: "md:col-span-1 md:row-span-1",
         settings: "85mm • f/1.4 • 1/1250s • ISO 100",
+        isHighlight: 1,
       },
       {
         id: 4,
@@ -206,6 +222,7 @@ async function initDb() {
         url: "https://images.unsplash.com/photo-1520175480921-4edfa2983e0f?q=80&w=1200&auto=format&fit=crop",
         sizeClass: "md:col-span-2 md:row-span-2",
         settings: "50mm • f/1.8 • 1/320s • ISO 200",
+        isHighlight: 0,
       },
       {
         id: 5,
@@ -215,6 +232,7 @@ async function initDb() {
         url: "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=1200&auto=format&fit=crop",
         sizeClass: "md:col-span-1 md:row-span-1",
         settings: "24mm • f/2.8 • 1/500s • ISO 100",
+        isHighlight: 0,
       },
       {
         id: 6,
@@ -224,6 +242,7 @@ async function initDb() {
         url: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?q=80&w=1200&auto=format&fit=crop",
         sizeClass: "md:col-span-1 md:row-span-1",
         settings: "35mm • f/2.8 • 1/30s • ISO 1600",
+        isHighlight: 0,
       },
       {
         id: 7,
@@ -233,6 +252,7 @@ async function initDb() {
         url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1200&auto=format&fit=crop",
         sizeClass: "md:col-span-1 md:row-span-2",
         settings: "50mm • f/1.8 • 1/250s • ISO 400",
+        isHighlight: 0,
       },
       {
         id: 8,
@@ -242,12 +262,13 @@ async function initDb() {
         url: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=1200&auto=format&fit=crop",
         sizeClass: "md:col-span-2 md:row-span-1",
         settings: "16mm • f/8.0 • 1/160s • ISO 100",
+        isHighlight: 0,
       }
     ];
 
-    const stmt = await db.prepare('INSERT INTO photos (id, title, category, location, url, sizeClass, settings) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    const stmt = await db.prepare('INSERT INTO photos (id, title, category, location, url, sizeClass, settings, isHighlight) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
     for (const photo of defaultPhotos) {
-      await stmt.run(photo.id, photo.title, photo.category, photo.location, photo.url, photo.sizeClass, photo.settings);
+      await stmt.run(photo.id, photo.title, photo.category, photo.location, photo.url, photo.sizeClass, photo.settings, photo.isHighlight);
     }
     await stmt.finalize();
   }
@@ -354,9 +375,9 @@ app.post('/api/photos', requireAuth, async (req, res) => {
     try {
       await db.run('DELETE FROM photos');
       
-      const stmt = await db.prepare('INSERT INTO photos (id, title, category, location, url, sizeClass, settings) VALUES (?, ?, ?, ?, ?, ?, ?)');
+      const stmt = await db.prepare('INSERT INTO photos (id, title, category, location, url, sizeClass, settings, isHighlight) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
       for (const p of photos) {
-        await stmt.run(p.id, p.title, p.category, p.location, p.url, p.sizeClass, p.settings);
+        await stmt.run(p.id, p.title, p.category, p.location, p.url, p.sizeClass, p.settings, p.isHighlight || 0);
       }
       await stmt.finalize();
       await db.exec('COMMIT');

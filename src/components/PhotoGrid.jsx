@@ -95,6 +95,14 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  const highlights = useMemo(() => {
+    return photoList.filter(photo => photo.isHighlight === 1);
+  }, [photoList]);
+
+  const highlightsToDisplay = useMemo(() => {
+    return highlights.length > 0 ? highlights : photoList.slice(0, 3);
+  }, [highlights, photoList]);
+
   const categories = useMemo(() => {
     return ["All", ...subsections];
   }, [subsections]);
@@ -121,6 +129,69 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
 
   return (
     <section id="gallery" className="w-full max-w-7xl mx-auto px-6 py-12">
+      {/* Highlights Showcase */}
+      {highlightsToDisplay.length > 0 && (
+        <div className="mb-20">
+          <div className="flex flex-col mb-8">
+            <h3 className="font-display text-2xl font-bold tracking-tight text-white uppercase">
+              <CinematicTextReveal text={profileData.highlightsTitle || "Featured Highlights"} />
+            </h3>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {highlightsToDisplay.map((photo) => (
+              <motion.div
+                key={`highlight-${photo.id}`}
+                onClick={() => onPhotoClick(photo)}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="relative overflow-hidden rounded-2xl border border-white/10 group cursor-pointer aspect-[16/10] w-full h-auto"
+                data-cursor="view"
+                data-cursor-text="OPEN"
+              >
+                {/* Image element with protection overlay and watermark */}
+                <div className="relative w-full h-full overflow-hidden select-none">
+                  <img
+                    src={photo.url}
+                    alt={photo.title}
+                    loading="lazy"
+                    className="w-full h-full object-cover filter grayscale contrast-[1.1] brightness-[0.95] gallery-image gallery-image-hover-effect pointer-events-none select-none"
+                  />
+                  {/* Transparent protection overlay to block save actions */}
+                  <div className="absolute inset-0 z-10 bg-transparent pointer-events-auto" />
+                  
+                  {/* Subtle dynamic watermark */}
+                  <Watermark text={profileData.name} position="bottom-right" opacity={0.25} />
+                </div>
+
+                {/* Hover Dark Vignette overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 ease-out pointer-events-none" />
+
+                {/* Hover Metadata (Slide up) */}
+                <div className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 ease-out pointer-events-none flex flex-col justify-end">
+                  <span className="text-[10px] font-semibold text-white/50 tracking-widest uppercase mb-1">
+                    {photo.category} // {photo.location}
+                  </span>
+                  <h3 className="font-display text-lg font-bold text-white tracking-tight leading-none mb-2">
+                    {photo.title}
+                  </h3>
+                  <span className="text-[10px] font-mono text-white/70 tracking-widest">
+                    {photo.settings}
+                  </span>
+                </div>
+
+                {/* Decorative line frame border visible on hover */}
+                <div className="absolute inset-4 border border-white/0 group-hover:border-white/20 rounded-xl transition-all duration-500 ease-out pointer-events-none" />
+              </motion.div>
+            ))}
+          </div>
+          
+          <div className="w-full h-[1px] bg-white/5 mt-16" />
+        </div>
+      )}
+
       {/* Category Filter Navbar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
         <div>

@@ -38,7 +38,8 @@ export default function AdminPanel({
     aboutPara2: '',
     inquiriesTitle: '',
     galleryTitle: '',
-    gallerySubtitle: ''
+    gallerySubtitle: '',
+    highlightsTitle: ''
   });
 
   // Local state for photo editing
@@ -52,7 +53,8 @@ export default function AdminPanel({
     location: '',
     url: '',
     sizeClass: 'md:col-span-1 md:row-span-1',
-    settings: '50mm • f/2.0 • 1/500s • ISO 100'
+    settings: '50mm • f/2.0 • 1/500s • ISO 100',
+    isHighlight: 0
   });
 
   // Local state for subsections management
@@ -84,7 +86,8 @@ export default function AdminPanel({
         aboutPara2: profileData.aboutPara2 || 'By embracing rich color grading, warm shadows, and authentic moments, each image becomes an invitation to wander. Through {name}\'s lens, we traverse the boundary between the familiar and the wild, celebrating the rich storytelling built directly into the fabric of our world.',
         inquiriesTitle: profileData.inquiriesTitle || 'Let\'s capture the next adventure.',
         galleryTitle: profileData.galleryTitle || 'Visual Archive',
-        gallerySubtitle: profileData.gallerySubtitle || 'Curated collection of frames'
+        gallerySubtitle: profileData.gallerySubtitle || 'Curated collection of frames',
+        highlightsTitle: profileData.highlightsTitle || 'Featured Highlights'
       });
     }
   }, [profileData]);
@@ -239,7 +242,8 @@ export default function AdminPanel({
       location: photo.location || '',
       url: photo.url || '',
       sizeClass: photo.sizeClass || 'md:col-span-1 md:row-span-1',
-      settings: photo.settings || '50mm • f/2.0 • 1/500s • ISO 100'
+      settings: photo.settings || '50mm • f/2.0 • 1/500s • ISO 100',
+      isHighlight: photo.isHighlight || 0
     });
   };
 
@@ -253,7 +257,8 @@ export default function AdminPanel({
       location: '',
       url: '',
       sizeClass: 'md:col-span-1 md:row-span-1',
-      settings: '50mm • f/2.0 • 1/500s • ISO 100'
+      settings: '50mm • f/2.0 • 1/500s • ISO 100',
+      isHighlight: 0
     });
   };
 
@@ -845,6 +850,20 @@ export default function AdminPanel({
                             </div>
                           </div>
                         </div>
+                        
+                        <div className="border-b border-white/5 pb-4">
+                          <h4 className="text-xs font-semibold text-white tracking-widest uppercase mb-4">Highlights Section</h4>
+                          <div className="space-y-2">
+                            <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold">Highlights Title</label>
+                            <input
+                              type="text"
+                              required
+                              value={profileForm.highlightsTitle}
+                              onChange={(e) => setProfileForm({ ...profileForm, highlightsTitle: e.target.value })}
+                              className="w-full bg-neutral-900/60 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-white focus:outline-none text-white font-light tracking-wide transition-colors"
+                            />
+                          </div>
+                        </div>
 
                         <div className="border-b border-white/5 pb-4">
                           <h4 className="text-xs font-semibold text-white tracking-widest uppercase mb-4">About / Artist Statement Section</h4>
@@ -1043,6 +1062,7 @@ export default function AdminPanel({
                                 <th className="p-4">Frame</th>
                                 <th className="p-4">Details</th>
                                 <th className="p-4">Category</th>
+                                <th className="p-4">Highlight</th>
                                 <th className="p-4">Size Grid</th>
                                 <th className="p-4 text-right">Actions</th>
                               </tr>
@@ -1070,6 +1090,15 @@ export default function AdminPanel({
                                     <span className="px-2.5 py-1 bg-white/5 border border-white/10 text-white rounded-full text-[9px] uppercase tracking-wider font-semibold">
                                       {photo.category}
                                     </span>
+                                  </td>
+                                  <td className="p-4">
+                                    {photo.isHighlight === 1 ? (
+                                      <span className="px-2.5 py-0.5 bg-white text-black text-[9px] uppercase tracking-wider font-bold rounded">
+                                        Yes
+                                      </span>
+                                    ) : (
+                                      <span className="text-neutral-600 font-bold">-</span>
+                                    )}
                                   </td>
                                   <td className="p-4 font-mono text-[10px]">
                                     {photo.sizeClass.includes('aspect-[16/9]') 
@@ -1176,6 +1205,20 @@ export default function AdminPanel({
                                 <option value="md:col-span-2 aspect-[16/9] h-auto">Landscape Card (16:9)</option>
                                 <option value="md:col-span-1 aspect-[9/16] h-auto">Portrait Card (9:16)</option>
                               </select>
+                            </div>
+                            <div className="space-y-2 flex flex-col justify-end">
+                              <div className="flex items-center space-x-3 bg-neutral-900/40 border border-white/10 rounded-xl px-4 py-3 h-[46px]">
+                                <input
+                                  type="checkbox"
+                                  id="isHighlight"
+                                  checked={photoForm.isHighlight === 1}
+                                  onChange={(e) => setPhotoForm({ ...photoForm, isHighlight: e.target.checked ? 1 : 0 })}
+                                  className="w-4 h-4 bg-neutral-950 border-white/10 rounded focus:ring-0 focus:ring-offset-0 text-white cursor-pointer"
+                                />
+                                <label htmlFor="isHighlight" className="text-xs text-white cursor-pointer font-medium select-none">
+                                  Showcase in Highlights
+                                </label>
+                              </div>
                             </div>
                           </div>
 
