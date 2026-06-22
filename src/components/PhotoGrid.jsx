@@ -130,7 +130,7 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
           <motion.p 
             initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: false, margin: "-100px" }}
             transition={{ duration: 0.8, ease: "easeOut", delay: 0.15 }}
             className="text-xs text-[#8c8c8c] tracking-wider mt-1 uppercase"
           >

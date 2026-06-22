@@ -400,7 +400,7 @@ export default function App() {
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
+              viewport={{ once: false, margin: "-100px" }}
               transition={{ duration: 0.8, ease: "easeOut" }}
             >
               {profileData.aboutPara1 || "Every journey is a search for connection. As a visual storyteller, I believe the most profound travel photographs aren't just of places, but of feelings. My lens documents the warmth of the sun on ancient stone, the vastness of quiet wilderness, and the stories written on the faces of people I meet along the way."}
@@ -409,7 +409,7 @@ export default function App() {
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
+              viewport={{ once: false, margin: "-100px" }}
               transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
             >
               {(profileData.aboutPara2 || "By embracing rich color grading...").replace(/{name}/g, profileData.name).replace(/{profileData.name}/g, profileData.name)}
@@ -430,7 +430,7 @@ export default function App() {
               <motion.span 
                 initial={{ opacity: 0, y: 15 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-100px" }}
+                viewport={{ once: false, margin: "-100px" }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
                 className="text-xs font-semibold tracking-[0.3em] text-[#8c8c8c] uppercase block"
               >
@@ -444,7 +444,7 @@ export default function App() {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
+              viewport={{ once: false, margin: "-100px" }}
               transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
               className="space-y-2"
             >

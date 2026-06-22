@@ -34,7 +34,7 @@ export default function CinematicTextReveal({ text = "", className = "" }) {
       variants={containerVariants}
       initial="hidden"
       whileInView="visible"
-      viewport={{ once: true, margin: "-100px" }}
+      viewport={{ once: false, margin: "-100px" }}
       className={`inline-flex flex-wrap ${className}`}
     >
       {words.map((word, i) => (
