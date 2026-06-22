@@ -81,7 +81,7 @@ export default function Lightbox({ photo, onClose, onPrev, onNext, artistName = 
       </motion.button>
 
       {/* Core Container */}
-      <div className="relative z-54 w-full max-w-5xl px-6 flex flex-col items-center justify-center h-full max-h-[85vh]">
+      <div className="relative z-54 w-full max-w-5xl px-4 md:px-6 flex flex-col items-center justify-center h-full max-h-[90vh] md:max-h-[85vh]">
         
         {/* Animated Card Container */}
         <motion.div
@@ -90,15 +90,15 @@ export default function Lightbox({ photo, onClose, onPrev, onNext, artistName = 
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           style={{ willChange: 'transform, opacity' }}
-          className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 flex flex-col md:flex-row shadow-2xl"
+          className="relative w-full overflow-y-auto md:overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 flex flex-col md:flex-row shadow-2xl max-h-[85vh] md:max-h-none"
         >
           {/* Left Side: Photo Frame with watermark and overlay protection */}
-          <div className="relative flex-1 bg-black flex items-center justify-center h-[50vh] md:h-[65vh] overflow-hidden select-none">
+          <div className="relative flex-1 bg-black flex items-center justify-center h-[35vh] md:h-[65vh] overflow-hidden select-none">
             <div className="relative inline-block max-h-full max-w-full">
               <img
                 src={photo.url}
                 alt={photo.title}
-                className="max-h-[50vh] md:max-h-[65vh] max-w-full object-contain block filter contrast-[1.05] pointer-events-none select-none"
+                className="max-h-[35vh] md:max-h-[65vh] max-w-full object-contain block filter contrast-[1.05] pointer-events-none select-none"
               />
               {/* Transparent protection overlay */}
               <div className="absolute inset-0 z-10 bg-transparent pointer-events-auto" />

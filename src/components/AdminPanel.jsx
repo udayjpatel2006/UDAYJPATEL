@@ -540,7 +540,7 @@ export default function AdminPanel({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-xl px-4 py-8 overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-xl md:px-4 md:py-8 overflow-y-auto">
       <AnimatePresence>
         {!isLoggedIn ? (
           /* Login Dialog */
@@ -548,7 +548,7 @@ export default function AdminPanel({
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -30 }}
-            className="w-full max-w-md bg-neutral-950 border border-white/10 rounded-3xl p-8 shadow-2xl relative"
+            className="w-full max-w-md bg-neutral-950 border border-white/10 rounded-3xl p-8 shadow-2xl relative mx-4 md:mx-0"
           >
             {/* Close Button */}
             <button 
@@ -596,7 +596,7 @@ export default function AdminPanel({
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-5xl bg-neutral-950 border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-full max-h-[85vh]"
+            className="w-full md:max-w-5xl bg-neutral-950 md:border border-white/10 md:rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-full md:h-auto md:max-h-[85vh]"
           >
             {/* Sidebar Navigation */}
             <div className="w-full md:w-60 bg-neutral-900/40 border-b md:border-b-0 md:border-r border-white/10 p-6 flex flex-col justify-between">
@@ -611,10 +611,10 @@ export default function AdminPanel({
                   </div>
                 </div>
 
-                <nav className="flex md:flex-col gap-2 overflow-x-auto pb-2 md:pb-0">
+                <nav className="flex md:flex-col gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
                   <button
                     onClick={() => { setActiveTab('profile'); setEditingPhoto(null); setIsAddingNew(false); }}
-                    className={`px-4 py-2.5 rounded-full text-left text-xs uppercase tracking-widest font-semibold transition-colors w-full ${
+                    className={`px-4 py-2.5 rounded-full text-left text-xs uppercase tracking-widest font-semibold transition-colors w-full whitespace-nowrap ${
                       activeTab === 'profile' ? 'bg-white text-black' : 'text-[#8c8c8c] hover:text-white hover:bg-white/5'
                     }`}
                   >
@@ -622,7 +622,7 @@ export default function AdminPanel({
                   </button>
                   <button
                     onClick={() => { setActiveTab('texts'); setEditingPhoto(null); setIsAddingNew(false); }}
-                    className={`px-4 py-2.5 rounded-full text-left text-xs uppercase tracking-widest font-semibold transition-colors w-full ${
+                    className={`px-4 py-2.5 rounded-full text-left text-xs uppercase tracking-widest font-semibold transition-colors w-full whitespace-nowrap ${
                       activeTab === 'texts' ? 'bg-white text-black' : 'text-[#8c8c8c] hover:text-white hover:bg-white/5'
                     }`}
                   >
@@ -630,7 +630,7 @@ export default function AdminPanel({
                   </button>
                   <button
                     onClick={() => { setActiveTab('gallery'); setEditingPhoto(null); setIsAddingNew(false); }}
-                    className={`px-4 py-2.5 rounded-full text-left text-xs uppercase tracking-widest font-semibold transition-colors w-full ${
+                    className={`px-4 py-2.5 rounded-full text-left text-xs uppercase tracking-widest font-semibold transition-colors w-full whitespace-nowrap ${
                       activeTab === 'gallery' ? 'bg-white text-black' : 'text-[#8c8c8c] hover:text-white hover:bg-white/5'
                     }`}
                   >
@@ -638,11 +638,25 @@ export default function AdminPanel({
                   </button>
                   <button
                     onClick={() => { setActiveTab('settings'); setEditingPhoto(null); setIsAddingNew(false); }}
-                    className={`px-4 py-2.5 rounded-full text-left text-xs uppercase tracking-widest font-semibold transition-colors w-full ${
+                    className={`px-4 py-2.5 rounded-full text-left text-xs uppercase tracking-widest font-semibold transition-colors w-full whitespace-nowrap ${
                       activeTab === 'settings' ? 'bg-white text-black' : 'text-[#8c8c8c] hover:text-white hover:bg-white/5'
                     }`}
                   >
                     System Control
+                  </button>
+                  
+                  {/* Mobile Exit & Logout */}
+                  <button
+                    onClick={onClose}
+                    className="md:hidden px-4 py-2.5 rounded-full text-xs uppercase tracking-widest font-semibold text-[#8c8c8c] hover:text-white hover:bg-white/5 whitespace-nowrap"
+                  >
+                    Exit
+                  </button>
+                  <button
+                    onClick={onLogout}
+                    className="md:hidden px-4 py-2.5 rounded-full text-xs uppercase tracking-widest font-semibold text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 whitespace-nowrap"
+                  >
+                    Logout
                   </button>
                 </nav>
               </div>
@@ -1057,8 +1071,8 @@ export default function AdminPanel({
                           </button>
                         </div>
 
-                        <div className="border border-white/5 rounded-2xl overflow-hidden bg-neutral-950/40 max-h-[50vh] overflow-y-auto">
-                          <table className="w-full border-collapse text-left text-xs text-[#8c8c8c]">
+                        <div className="border border-white/5 rounded-2xl overflow-hidden bg-neutral-950/40 max-h-[50vh] overflow-y-auto overflow-x-auto">
+                          <table className="w-full border-collapse text-left text-xs text-[#8c8c8c] min-w-[700px] md:min-w-0">
                             <thead className="bg-neutral-900/50 text-[10px] tracking-widest text-white uppercase border-b border-white/5 font-semibold">
                               <tr>
                                 <th className="p-4">Frame</th>

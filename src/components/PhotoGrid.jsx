@@ -89,7 +89,13 @@ const PHOTO_DATA = [
 
 export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profileData = {}, subsections = [] }) {
   const [activeCategory, setActiveCategory] = useState("All");
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    const isSmallScreen = window.innerWidth < 1024;
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return isTouch || isSmallScreen || isMobileUA;
+  });
 
   useEffect(() => {
     const checkMobile = () => {
@@ -98,7 +104,6 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
       const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       setIsMobile(isTouch || isSmallScreen || isMobileUA);
     };
-    checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);

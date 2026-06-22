@@ -1,8 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
 export default function CinematicTextReveal({ text = "", className = "" }) {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    const isSmallScreen = window.innerWidth < 768;
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return isTouch || isSmallScreen || isMobileUA;
+  });
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const isTouch = window.matchMedia('(pointer: coarse)').matches;
+      const isSmallScreen = window.innerWidth < 768;
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(isTouch || isSmallScreen || isMobileUA);
+    };
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   if (!text) return null;
+  
+  if (isMobile) {
+    return <span className={className}>{text}</span>;
+  }
+
   const words = text.split(" ");
   
   const containerVariants = {
@@ -34,7 +58,7 @@ export default function CinematicTextReveal({ text = "", className = "" }) {
       variants={containerVariants}
       initial="hidden"
       whileInView="visible"
-      viewport={{ once: false, margin: "-100px" }}
+      viewport={{ once: true, margin: "-100px" }}
       className={`inline-flex flex-wrap ${className}`}
     >
       {words.map((word, i) => (
@@ -47,3 +71,4 @@ export default function CinematicTextReveal({ text = "", className = "" }) {
     </motion.span>
   );
 }
+

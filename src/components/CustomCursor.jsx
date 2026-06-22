@@ -5,7 +5,13 @@ export default function CustomCursor() {
   const [cursorType, setCursorType] = useState('default');
   const [cursorText, setCursorText] = useState('');
   const [isVisible, setIsVisible] = useState(false);
-  const [isMobile, setIsMobile] = useState(true);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    const isSmallScreen = window.innerWidth < 1024;
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return isTouch || isSmallScreen || isMobileUA;
+  });
 
   // Mouse coordinates tracking
   const mouseX = useMotionValue(-100);
@@ -20,7 +26,6 @@ export default function CustomCursor() {
       setIsMobile(isTouch || isSmallScreen || isMobileUA);
     };
 
-    checkDevice();
     window.addEventListener('resize', checkDevice);
 
     if (isMobile) return;

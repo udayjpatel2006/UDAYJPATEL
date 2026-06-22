@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Instagram, Mail, ArrowUpRight, Globe, Camera } from 'lucide-react';
 import profileImg from '../../imgs/20260305_121542.jpg';
-import heroBg from '../../imgs/hero_bg.png';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -91,7 +90,7 @@ export default function Hero({ profileData = {} }) {
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
               {tagline}
             </span>
-            <h1 className="font-display text-4xl sm:text-6xl xl:text-7xl font-bold tracking-tight leading-[1.05] text-white">
+            <h1 className="font-display text-3xl sm:text-5xl md:text-6xl xl:text-7xl font-bold tracking-tight leading-[1.05] text-white">
               {titleLine1} <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/80 to-white/40">{titleLine2}</span>
             </h1>
@@ -141,7 +140,7 @@ export default function Hero({ profileData = {} }) {
         </div>
 
         {/* Right Column: Visual Frame with overlay protection */}
-        <div className="lg:col-span-5 relative w-full h-[400px] sm:h-[500px] md:h-[550px] overflow-hidden rounded-2xl border border-white/10 group select-none">
+        <div className="lg:col-span-5 relative w-full h-[300px] sm:h-[400px] lg:h-[550px] overflow-hidden rounded-2xl border border-white/10 group select-none">
           {/* Decorative frame overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent z-10 pointer-events-none" />
           
