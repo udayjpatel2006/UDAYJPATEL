@@ -1,18 +1,26 @@
-import React, { useEffect, useState } from 'react';
-import { motion, useMotionValue } from 'framer-motion';
+import React, { useEffect, useRef, useState } from 'react';
 
+/**
+ * Premium custom cursor system with inner dot, smooth lerped follow ring,
+ * magnetic snapping behaviors, canvas particle trail, and mix-blend color inversion.
+ * Automatically disabled on mobile/touch viewports for performance.
+ */
 export default function CustomCursor() {
-  const [cursorType, setCursorType] = useState('default');
-  const [cursorText, setCursorText] = useState('');
-  const [isVisible, setIsVisible] = useState(false);
+  const dotRef = useRef(null);
+  const ringRef = useRef(null);
+  const canvasRef = useRef(null);
+  
   const [isMobile, setIsMobile] = useState(true);
+  const [cursorText, setCursorText] = useState('');
 
-  // Mouse coordinates tracking
-  const mouseX = useMotionValue(-100);
-  const mouseY = useMotionValue(-100);
+  // Refs for animation values to keep updates outside react state
+  const mouse = useRef({ x: -100, y: -100 });
+  const ring = useRef({ x: -100, y: -100, w: 20, h: 20, r: 10 });
+  const targetRing = useRef({ x: -100, y: -100, w: 20, h: 20, r: 10, isMagnetic: false });
+  const particles = useRef([]);
+  const lastMousePos = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
-    // Check if it's a touch device, mobile browser, or small screen
     const checkDevice = () => {
       const isTouch = window.matchMedia('(pointer: coarse)').matches;
       const isSmallScreen = window.innerWidth < 1024;
@@ -22,106 +30,236 @@ export default function CustomCursor() {
 
     checkDevice();
     window.addEventListener('resize', checkDevice);
+    return () => window.removeEventListener('resize', checkDevice);
+  }, []);
 
+  useEffect(() => {
     if (isMobile) return;
 
-    // Show cursor on first mouse move
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
     const handleMouseMove = (e) => {
-      mouseX.set(e.clientX);
-      mouseY.set(e.clientY);
-      if (!isVisible) setIsVisible(true);
+      mouse.current.x = e.clientX;
+      mouse.current.y = e.clientY;
+
+      // Spawn trail particles based on mouse movement speed/distance
+      const dx = e.clientX - lastMousePos.current.x;
+      const dy = e.clientY - lastMousePos.current.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist > 4 && particles.current.length < 50) {
+        const count = Math.min(2, Math.floor(dist / 10) + 1);
+        for (let i = 0; i < count; i++) {
+          particles.current.push({
+            x: e.clientX + (Math.random() - 0.5) * 6,
+            y: e.clientY + (Math.random() - 0.5) * 6,
+            vx: (Math.random() - 0.5) * 0.8,
+            vy: (Math.random() - 0.5) * 0.8,
+            size: Math.random() * 1.5 + 0.8,
+            alpha: 0.6,
+            decay: Math.random() * 0.02 + 0.015
+          });
+        }
+        lastMousePos.current = { x: e.clientX, y: e.clientY };
+      }
     };
 
-    // Global listener to update cursor type based on hovered elements
+    // Target tracking for size transformations and magnetic snapping
     const handleMouseOver = (e) => {
-      const target = e.target.closest('[data-cursor], a, button, img');
+      const target = e.target.closest('[data-cursor], a, button, input, textarea, select');
       if (target) {
         const type = target.getAttribute('data-cursor') || 'pointer';
         const text = target.getAttribute('data-cursor-text') || '';
-        setCursorType(type);
-        setCursorText(text);
+        
+        if (type === 'magnetic') {
+          const rect = target.getBoundingClientRect();
+          const cx = rect.left + rect.width / 2;
+          const cy = rect.top + rect.height / 2;
+          
+          targetRing.current.x = cx;
+          targetRing.current.y = cy;
+          targetRing.current.w = rect.width + 12;
+          targetRing.current.h = rect.height + 12;
+          
+          const style = window.getComputedStyle(target);
+          const br = parseFloat(style.borderRadius) || 8;
+          targetRing.current.r = br + 4;
+          targetRing.current.isMagnetic = true;
+          setCursorText('');
+        } else if (type === 'view' || type === 'text') {
+          targetRing.current.w = 70;
+          targetRing.current.h = 70;
+          targetRing.current.r = 35;
+          targetRing.current.isMagnetic = false;
+          setCursorText(text || (type === 'view' ? 'VIEW' : ''));
+        } else { // default pointer
+          targetRing.current.w = 34;
+          targetRing.current.h = 34;
+          targetRing.current.r = 17;
+          targetRing.current.isMagnetic = false;
+          setCursorText('');
+        }
       } else {
-        setCursorType('default');
+        // Reset to default sizing
+        targetRing.current.w = 20;
+        targetRing.current.h = 20;
+        targetRing.current.r = 10;
+        targetRing.current.isMagnetic = false;
         setCursorText('');
       }
     };
 
-    const handleMouseLeaveWindow = () => setIsVisible(false);
-    const handleMouseEnterWindow = () => setIsVisible(true);
-
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseover', handleMouseOver);
-    document.addEventListener('mouseleave', handleMouseLeaveWindow);
-    document.addEventListener('mouseenter', handleMouseEnterWindow);
+
+    let animId;
+    const update = () => {
+      // 1. Move Inner Dot instantly (offset by half size = 2px)
+      if (dotRef.current) {
+        dotRef.current.style.transform = `translate3d(${mouse.current.x - 2}px, ${mouse.current.y - 2}px, 0)`;
+      }
+
+      // 2. Lerp Outer Ring position & dimensions
+      let rx = mouse.current.x;
+      let ry = mouse.current.y;
+      
+      if (targetRing.current.isMagnetic) {
+        rx = targetRing.current.x;
+        ry = targetRing.current.y;
+      }
+
+      // Smooth lag interpolation
+      ring.current.x += (rx - ring.current.x) * 0.16;
+      ring.current.y += (ry - ring.current.y) * 0.16;
+      ring.current.w += (targetRing.current.w - ring.current.w) * 0.16;
+      ring.current.h += (targetRing.current.h - ring.current.h) * 0.16;
+      ring.current.r += (targetRing.current.r - ring.current.r) * 0.16;
+
+      if (ringRef.current) {
+        const tx = ring.current.x - ring.current.w / 2;
+        const ty = ring.current.y - ring.current.h / 2;
+        ringRef.current.style.transform = `translate3d(${tx}px, ${ty}px, 0)`;
+        ringRef.current.style.width = `${ring.current.w}px`;
+        ringRef.current.style.height = `${ring.current.h}px`;
+        ringRef.current.style.borderRadius = `${ring.current.r}px`;
+      }
+
+      // 3. Draw trail particles
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      for (let i = particles.current.length - 1; i >= 0; i--) {
+        const p = particles.current[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= p.decay;
+
+        if (p.alpha <= 0) {
+          particles.current.splice(i, 1);
+          continue;
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
+        ctx.fill();
+      }
+
+      animId = requestAnimationFrame(update);
+    };
+
+    update();
 
     return () => {
-      window.removeEventListener('resize', checkDevice);
+      window.removeEventListener('resize', handleResize);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseover', handleMouseOver);
-      document.removeEventListener('mouseleave', handleMouseLeaveWindow);
-      document.removeEventListener('mouseenter', handleMouseEnterWindow);
+      cancelAnimationFrame(animId);
     };
-  }, [isMobile, isVisible, mouseX, mouseY]);
+  }, [isMobile]);
 
-  if (isMobile || !isVisible) return null;
-
-  // Variants for cursor sizing and blend modes
-  const cursorVariants = {
-    default: {
-      scale: 1,
-      opacity: 0.95,
-    },
-    pointer: {
-      scale: 1.37,
-      opacity: 1,
-    },
-    view: {
-      scale: 1.57,
-      opacity: 1,
-    },
-    text: {
-      scale: 1.57,
-      opacity: 1,
-    }
-  };
-
-  const isViewOrText = cursorType === 'view' || cursorType === 'text';
+  if (isMobile) return null;
 
   return (
-    <motion.div
-      style={{
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        width: 350,
-        height: 350,
-        translateX: mouseX,
-        translateY: mouseY,
-        x: '-50%',
-        y: '-50%',
-        pointerEvents: 'none',
-        zIndex: 9999,
-        borderRadius: '50%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        mixBlendMode: 'screen',
-        background: 'radial-gradient(circle, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.08) 35%, rgba(255, 255, 255, 0.01) 65%, rgba(255, 255, 255, 0) 85%)',
-        willChange: 'transform',
-      }}
-      animate={cursorType}
-      variants={cursorVariants}
-      transition={{ type: 'spring', stiffness: 450, damping: 32, mass: 0.4 }}
-    >
-      {isViewOrText && (
-        <motion.span
-          initial={{ opacity: 0, scale: 0.6 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-[10px] font-display font-semibold tracking-[0.2em] text-white uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
-        >
-          {cursorText || 'VIEW'}
-        </motion.span>
-      )}
-    </motion.div>
+    <>
+      <canvas
+        ref={canvasRef}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          pointerEvents: 'none',
+          zIndex: 9998,
+          mixBlendMode: 'difference'
+        }}
+      />
+      
+      {/* Inner Dot */}
+      <div
+        ref={dotRef}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '4px',
+          height: '4px',
+          borderRadius: '50%',
+          backgroundColor: '#ffffff',
+          pointerEvents: 'none',
+          zIndex: 10000,
+          mixBlendMode: 'difference',
+          transform: 'translate3d(-100px, -100px, 0)',
+          willChange: 'transform'
+        }}
+      />
+      
+      {/* Outer follow ring */}
+      <div
+        ref={ringRef}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '20px',
+          height: '20px',
+          borderRadius: '50%',
+          border: '1.2px solid #ffffff',
+          pointerEvents: 'none',
+          zIndex: 9999,
+          mixBlendMode: 'difference',
+          transform: 'translate3d(-100px, -100px, 0)',
+          willChange: 'transform, width, height, border-radius',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        {cursorText && (
+          <span
+            style={{
+              fontSize: '8px',
+              fontFamily: 'var(--font-display, Syne, sans-serif)',
+              fontWeight: 700,
+              letterSpacing: '0.15em',
+              color: '#ffffff',
+              transform: 'scale(0.85)',
+              willChange: 'transform'
+            }}
+          >
+            {cursorText}
+          </span>
+        )}
+      </div>
+    </>
   );
 }

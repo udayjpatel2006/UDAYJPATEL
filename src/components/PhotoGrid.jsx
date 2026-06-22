@@ -2,6 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CinematicTextReveal from './CinematicTextReveal';
 import Watermark from './Watermark';
+import MagneticWrapper from './MagneticWrapper';
+import TiltWrapper from './TiltWrapper';
 
 // Curated high-end travel and adventure photography dataset
 const PHOTO_DATA = [
@@ -141,23 +143,24 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
         {/* Filters */}
         <div className="flex flex-wrap gap-2">
           {categories.map(category => (
-            <button
-              key={category}
-              onClick={() => setActiveCategory(category)}
-              className={`relative px-4 py-2 text-xs font-semibold uppercase tracking-widest transition-colors duration-300 rounded-full ${
-                activeCategory === category ? 'text-black' : 'text-[#8c8c8c] hover:text-white'
-              }`}
-              data-cursor="pointer"
-            >
-              {activeCategory === category && (
-                <motion.span
-                  layoutId="activeFilter"
-                  className="absolute inset-0 bg-white rounded-full -z-10"
-                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                />
-              )}
-              {category}
-            </button>
+            <MagneticWrapper key={category}>
+              <button
+                onClick={() => setActiveCategory(category)}
+                className={`relative px-4 py-2 text-xs font-semibold uppercase tracking-widest transition-colors duration-300 rounded-full ${
+                  activeCategory === category ? 'text-black' : 'text-[#8c8c8c] hover:text-white'
+                }`}
+                data-cursor="pointer"
+              >
+                {activeCategory === category && (
+                  <motion.span
+                    layoutId="activeFilter"
+                    className="absolute inset-0 bg-white rounded-full -z-10"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+                {category}
+              </button>
+            </MagneticWrapper>
           ))}
         </div>
       </div>
@@ -183,19 +186,21 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
               data-cursor-text="OPEN"
             >
               {/* Image element with watermark and overlay protection */}
-              <div className="relative w-full h-full overflow-hidden select-none">
-                <img
-                  src={photo.url}
-                  alt={photo.title}
-                  loading="lazy"
-                  className="w-full h-full object-cover filter grayscale contrast-[1.1] brightness-[0.95] gallery-image gallery-image-hover-effect pointer-events-none select-none"
-                />
-                {/* Transparent protection overlay to block save actions */}
-                <div className="absolute inset-0 z-10 bg-transparent pointer-events-auto" />
-                
-                {/* Subtle dynamic watermark */}
-                <Watermark text={profileData.name} position="bottom-right" opacity={0.25} />
-              </div>
+              <TiltWrapper>
+                <div className="relative w-full h-full overflow-hidden select-none">
+                  <img
+                    src={photo.url}
+                    alt={photo.title}
+                    loading="lazy"
+                    className="w-full h-full object-cover filter grayscale contrast-[1.1] brightness-[0.95] gallery-image gallery-image-hover-effect pointer-events-none select-none"
+                  />
+                  {/* Transparent protection overlay to block save actions */}
+                  <div className="absolute inset-0 z-10 bg-transparent pointer-events-auto" />
+                  
+                  {/* Subtle dynamic watermark */}
+                  <Watermark text={profileData.name} position="bottom-right" opacity={0.25} />
+                </div>
+              </TiltWrapper>
 
               {/* Hover Dark Vignette overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 ease-out pointer-events-none" />
