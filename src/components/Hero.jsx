@@ -116,9 +116,9 @@ export default function Hero({ profileData = {} }) {
             </a>
             
             <div className="flex items-center space-x-4">
-              {profileData.instaUrl && (
+              {(profileData.instaUrl || 'https://www.instagram.com/uday_j_patel_/') && (
                 <a 
-                  href={profileData.instaUrl} 
+                  href={profileData.instaUrl || 'https://www.instagram.com/uday_j_patel_/'} 
                   target="_blank" 
                   rel="noopener noreferrer" 
                   className="w-10 h-10 rounded-full border border-white/5 flex items-center justify-center text-[#8c8c8c] hover:text-white hover:border-white/20 transition-all duration-300 hover:scale-105"

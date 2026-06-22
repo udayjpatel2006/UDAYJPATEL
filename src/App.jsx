@@ -26,7 +26,8 @@ const DEFAULT_PROFILE = {
   galleryTitle: "Visual Archive",
   gallerySubtitle: "Curated collection of frames",
   highlightsTitle: "Featured Highlights",
-  highlightsSubtitle: "Curated Selection"
+  highlightsSubtitle: "Curated Selection",
+  web3FormsKey: ""
 };
 
 export default function App() {
@@ -48,6 +49,7 @@ export default function App() {
     e.preventDefault();
     setInquiryStatus({ submitting: true, success: false, error: null });
     try {
+      // 1. Save to local SQLite database first
       const res = await fetch('/api/inquiries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -59,8 +61,30 @@ export default function App() {
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Something went wrong');
+        throw new Error(data.error || 'Something went wrong saving inquiry');
       }
+
+      // 2. If Web3Forms key is configured, push email notification
+      if (profileData.web3FormsKey) {
+        console.log('[LOG] Web3Forms key found. Forwarding email notification...');
+        const emailRes = await fetch('https://api.web3forms.com/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            access_key: profileData.web3FormsKey,
+            name: inquiryForm.name,
+            email: inquiryForm.email,
+            message: inquiryForm.message,
+            subject: `New Portfolio Inquiry from ${inquiryForm.name}`,
+            from_name: `${profileData.name} Portfolio`
+          })
+        });
+        const emailData = await emailRes.json();
+        if (!emailRes.ok) {
+          throw new Error(emailData.message || 'Failed to send email via Web3Forms');
+        }
+      }
+
       setInquiryStatus({ submitting: false, success: true, error: null });
       setInquiryForm({ name: '', email: '', message: '' });
       setTimeout(() => {

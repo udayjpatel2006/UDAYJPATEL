@@ -159,7 +159,8 @@ async function initDb() {
       galleryTitle: "Visual Archive",
       gallerySubtitle: "Curated collection of frames",
       highlightsTitle: "Featured Highlights",
-      highlightsSubtitle: "Curated Selection"
+      highlightsSubtitle: "Curated Selection",
+      web3FormsKey: ""
     };
 
     const stmt = await db.prepare('INSERT INTO profile_settings (key, value) VALUES (?, ?)');

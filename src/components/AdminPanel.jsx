@@ -39,7 +39,8 @@ export default function AdminPanel({
     inquiriesTitle: '',
     galleryTitle: '',
     gallerySubtitle: '',
-    highlightsTitle: ''
+    highlightsTitle: '',
+    web3FormsKey: ''
   });
 
   // Local state for photo editing
@@ -87,7 +88,8 @@ export default function AdminPanel({
         inquiriesTitle: profileData.inquiriesTitle || 'Let\'s capture the next adventure.',
         galleryTitle: profileData.galleryTitle || 'Visual Archive',
         gallerySubtitle: profileData.gallerySubtitle || 'Curated collection of frames',
-        highlightsTitle: profileData.highlightsTitle || 'Featured Highlights'
+        highlightsTitle: profileData.highlightsTitle || 'Featured Highlights',
+        web3FormsKey: profileData.web3FormsKey || ''
       });
     }
   }, [profileData]);
@@ -1314,6 +1316,32 @@ export default function AdminPanel({
                           className="hidden"
                         />
                       </div>
+                    </div>
+
+                    <div className="border-t border-white/5 pt-8">
+                      <h3 className="font-display text-xl font-bold uppercase tracking-wide text-white mb-2">Inquiry Form Email Settings</h3>
+                      <p className="text-xs text-[#8c8c8c] leading-relaxed max-w-xl font-light mb-4">
+                        To receive form inquiries directly in your email inbox, register your email at <a href="https://web3forms.com/" target="_blank" rel="noopener noreferrer" className="text-white hover:underline font-semibold" data-cursor="pointer">Web3Forms</a> to get a free Access Key, then enter it below.
+                      </p>
+                      
+                      <form onSubmit={handleSaveProfile} className="space-y-4 max-w-md">
+                        <div className="space-y-2">
+                          <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold block">Web3Forms Access Key</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 12345678-abcd-1234-abcd-1234567890ab"
+                            value={profileForm.web3FormsKey || ''}
+                            onChange={(e) => setProfileForm({ ...profileForm, web3FormsKey: e.target.value })}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-white focus:outline-none tracking-wide text-white transition-colors"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          className="bg-white text-black px-6 py-2.5 rounded-full font-bold uppercase tracking-widest text-[10px] hover:bg-neutral-200 transition-colors"
+                        >
+                          Save Email Key
+                        </button>
+                      </form>
                     </div>
 
                     <div className="border-t border-white/5 pt-8">
