@@ -1,8 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Instagram, Mail, ArrowUpRight, Globe, Camera } from 'lucide-react';
-import MagneticWrapper from './MagneticWrapper';
-import TiltWrapper from './TiltWrapper';
 import profileImg from '../../imgs/20260305_121542.jpg';
 import heroBg from '../../imgs/hero_bg.png';
 
@@ -76,15 +74,9 @@ export default function Hero({ profileData = {} }) {
           <span className="font-display font-bold tracking-[0.25em] text-sm uppercase">{formattedName}</span>
         </div>
         <nav className="hidden md:flex space-x-8 text-xs font-medium uppercase tracking-widest text-[#8c8c8c]">
-          <MagneticWrapper>
-            <a href="#gallery" className="hover:text-white transition-colors duration-300" data-cursor="pointer">Gallery</a>
-          </MagneticWrapper>
-          <MagneticWrapper>
-            <a href="#about" className="hover:text-white transition-colors duration-300" data-cursor="pointer">About</a>
-          </MagneticWrapper>
-          <MagneticWrapper>
-            <a href="#contact" className="hover:text-white transition-colors duration-300" data-cursor="pointer">Contact</a>
-          </MagneticWrapper>
+          <a href="#gallery" className="hover:text-white transition-colors duration-300" data-cursor="pointer">Gallery</a>
+          <a href="#about" className="hover:text-white transition-colors duration-300" data-cursor="pointer">About</a>
+          <a href="#contact" className="hover:text-white transition-colors duration-300" data-cursor="pointer">Contact</a>
         </nav>
         <div className="w-[100px] md:hidden" /> {/* Spacer for alignment */}
       </motion.div>
@@ -114,77 +106,67 @@ export default function Hero({ profileData = {} }) {
 
           {/* Call to Actions & Socials */}
           <motion.div variants={itemVariants} className="flex flex-wrap items-center gap-6 pt-4">
-            <MagneticWrapper>
-              <a 
-                href="#gallery" 
-                className="group flex items-center space-x-2 text-xs font-bold tracking-widest uppercase bg-white text-black px-6 py-4 rounded-full hover:bg-neutral-200 transition-colors duration-300"
-                data-cursor="pointer"
-              >
-                <span>Explore Works</span>
-                <ArrowUpRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
-              </a>
-            </MagneticWrapper>
+            <a 
+              href="#gallery" 
+              className="group flex items-center space-x-2 text-xs font-bold tracking-widest uppercase bg-white text-black px-6 py-4 rounded-full hover:bg-neutral-200 transition-colors duration-300"
+              data-cursor="pointer"
+            >
+              <span>Explore Works</span>
+              <ArrowUpRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
+            </a>
             
             <div className="flex items-center space-x-4">
               {profileData.instaUrl && (
-                <MagneticWrapper>
-                  <a 
-                    href={profileData.instaUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="w-10 h-10 rounded-full border border-white/5 flex items-center justify-center text-[#8c8c8c] hover:text-white hover:border-white/20 transition-all duration-300 hover:scale-105"
-                    data-cursor="pointer"
-                    aria-label="Instagram"
-                  >
-                    <Instagram className="w-4 h-4" />
-                  </a>
-                </MagneticWrapper>
-              )}
-              <MagneticWrapper>
                 <a 
-                  href={`mailto:${email || 'udayjpatel2006@gmail.com'}`} 
+                  href={profileData.instaUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
                   className="w-10 h-10 rounded-full border border-white/5 flex items-center justify-center text-[#8c8c8c] hover:text-white hover:border-white/20 transition-all duration-300 hover:scale-105"
                   data-cursor="pointer"
-                  aria-label="Email"
+                  aria-label="Instagram"
                 >
-                  <Mail className="w-4 h-4" />
+                  <Instagram className="w-4 h-4" />
                 </a>
-              </MagneticWrapper>
+              )}
+              <a 
+                href={`mailto:${email || 'udayjpatel2006@gmail.com'}`} 
+                className="w-10 h-10 rounded-full border border-white/5 flex items-center justify-center text-[#8c8c8c] hover:text-white hover:border-white/20 transition-all duration-300 hover:scale-105"
+                data-cursor="pointer"
+                aria-label="Email"
+              >
+                <Mail className="w-4 h-4" />
+              </a>
             </div>
           </motion.div>
         </div>
 
         {/* Right Column: Visual Frame with overlay protection */}
-        <div className="lg:col-span-5 relative w-full h-[400px] sm:h-[500px] md:h-[550px] select-none">
-          <TiltWrapper>
-            <div className="relative w-full h-full overflow-hidden rounded-2xl border border-white/10 group select-none">
-              {/* Decorative frame overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent z-10 pointer-events-none" />
-              
-              <motion.img 
-                variants={imageVariants}
-                src={photoUrl} 
-                alt={`${name} — Profile`} 
-                className="w-full h-full object-cover filter grayscale contrast-[1.1] brightness-[0.95] group-hover:scale-105 group-hover:filter-none transition-all duration-700 ease-out object-center pointer-events-none select-none"
-                data-cursor="view"
-                data-cursor-text="EXPLORE"
-              />
+        <div className="lg:col-span-5 relative w-full h-[400px] sm:h-[500px] md:h-[550px] overflow-hidden rounded-2xl border border-white/10 group select-none">
+          {/* Decorative frame overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent z-10 pointer-events-none" />
+          
+          <motion.img 
+            variants={imageVariants}
+            src={photoUrl} 
+            alt={`${name} — Profile`} 
+            className="w-full h-full object-cover filter grayscale contrast-[1.1] brightness-[0.95] group-hover:scale-105 group-hover:filter-none transition-all duration-700 ease-out object-center pointer-events-none select-none"
+            data-cursor="view"
+            data-cursor-text="EXPLORE"
+          />
 
-              {/* Transparent protection overlay to block save/drag */}
-              <div className="absolute inset-0 z-11 bg-transparent pointer-events-auto" />
+          {/* Transparent protection overlay to block save/drag */}
+          <div className="absolute inset-0 z-11 bg-transparent pointer-events-auto" />
 
-              {/* Bottom indicator */}
-              <div className="absolute bottom-6 left-6 right-6 z-20 flex justify-between items-end">
-                <div>
-                  <span className="text-sm font-semibold tracking-wider text-white">{name} // PORTFOLIO</span>
-                </div>
-                <div className="flex items-center space-x-2 text-[10px] uppercase tracking-widest text-white/50">
-                  <Globe className="w-3 h-3 animate-spin-[20s]" />
-                  <span>{location}</span>
-                </div>
-              </div>
+          {/* Bottom indicator */}
+          <div className="absolute bottom-6 left-6 right-6 z-20 flex justify-between items-end">
+            <div>
+              <span className="text-sm font-semibold tracking-wider text-white">{name} // PORTFOLIO</span>
             </div>
-          </TiltWrapper>
+            <div className="flex items-center space-x-2 text-[10px] uppercase tracking-widest text-white/50">
+              <Globe className="w-3 h-3 animate-spin-[20s]" />
+              <span>{location}</span>
+            </div>
+          </div>
         </div>
 
       </div>

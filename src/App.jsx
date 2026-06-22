@@ -7,7 +7,6 @@ import PhotoGrid, { PHOTO_DATA } from './components/PhotoGrid';
 import Lightbox from './components/Lightbox';
 import AdminPanel from './components/AdminPanel';
 import CustomCursor from './components/CustomCursor';
-import MagneticWrapper from './components/MagneticWrapper';
 import profileImg from '../imgs/20260305_121542.jpg';
 
 const DEFAULT_PROFILE = {
@@ -525,17 +524,15 @@ export default function App() {
                   </p>
                 )}
 
-                <MagneticWrapper>
-                  <button
-                    type="submit"
-                    disabled={inquiryStatus.submitting}
-                    className="group flex items-center space-x-3 bg-white text-black px-8 py-4 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-neutral-200 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                    data-cursor="pointer"
-                  >
-                    <span>{inquiryStatus.submitting ? 'Sending...' : 'Send Proposal'}</span>
-                    <Send className="w-3.5 h-3.5" />
-                  </button>
-                </MagneticWrapper>
+                <button
+                  type="submit"
+                  disabled={inquiryStatus.submitting}
+                  className="group flex items-center space-x-3 bg-white text-black px-8 py-4 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-neutral-200 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  data-cursor="pointer"
+                >
+                  <span>{inquiryStatus.submitting ? 'Sending...' : 'Send Proposal'}</span>
+                  <Send className="w-3.5 h-3.5" />
+                </button>
               </form>
             )}
           </div>
@@ -546,15 +543,9 @@ export default function App() {
       <footer className="w-full max-w-7xl mx-auto px-6 py-12 flex flex-col md:flex-row justify-between items-center text-xs text-[#8c8c8c] border-t border-white/5 gap-4">
         <span>© 2026 {profileData.name.toUpperCase()}. ALL RIGHTS RESERVED.</span>
         <div className="flex items-center space-x-6">
-          <MagneticWrapper>
-            <a href="#gallery" className="hover:text-white transition-colors" data-cursor="pointer">JOURNEYS</a>
-          </MagneticWrapper>
-          <MagneticWrapper>
-            <a href="#about" className="hover:text-white transition-colors" data-cursor="pointer">STORY</a>
-          </MagneticWrapper>
-          <MagneticWrapper>
-            <a href="#contact" className="hover:text-white transition-colors" data-cursor="pointer">CONTACT</a>
-          </MagneticWrapper>
+          <a href="#gallery" className="hover:text-white transition-colors" data-cursor="pointer">JOURNEYS</a>
+          <a href="#about" className="hover:text-white transition-colors" data-cursor="pointer">STORY</a>
+          <a href="#contact" className="hover:text-white transition-colors" data-cursor="pointer">CONTACT</a>
         </div>
       </footer>
 

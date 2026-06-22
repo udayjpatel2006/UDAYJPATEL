@@ -89,19 +89,5 @@ img {
     transform: scale(1.05);
     filter: none !important;
   }
-
-  /* Hide default cursor globally on hover-capable devices */
-  html, body, a, button, input, textarea, select, [data-cursor], [role="button"] {
-    cursor: none !important;
-  }
 }
-
-/* 3D Perspective & Preservation Utilities */
-.perspective-1000 {
-  perspective: 1000px;
-}
-.preserve-3d {
-  transform-style: preserve-3d;
-}
-
 
