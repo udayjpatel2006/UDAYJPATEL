@@ -93,8 +93,8 @@ export default function CustomCursor() {
         position: 'fixed',
         left: 0,
         top: 0,
-        width: 350,
-        height: 350,
+        width: 500,
+        height: 500,
         translateX: mouseX,
         translateY: mouseY,
         x: '-50%',
@@ -106,7 +106,7 @@ export default function CustomCursor() {
         alignItems: 'center',
         justifyContent: 'center',
         mixBlendMode: 'screen',
-        background: 'radial-gradient(circle, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.08) 35%, rgba(255, 255, 255, 0.01) 65%, rgba(255, 255, 255, 0) 85%)',
+        background: 'radial-gradient(circle, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.12) 40%, rgba(255, 255, 255, 0.02) 70%, rgba(255, 255, 255, 0) 90%)',
         willChange: 'transform',
       }}
       animate={cursorType}
