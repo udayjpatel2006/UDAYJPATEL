@@ -67,23 +67,23 @@ export default function CustomCursor() {
   // Variants for cursor sizing and blend modes
   const cursorVariants = {
     default: {
-      width: 200,
-      height: 200,
-      opacity: 0.9,
+      width: 350,
+      height: 350,
+      opacity: 0.95,
     },
     pointer: {
-      width: 300,
-      height: 300,
+      width: 480,
+      height: 480,
       opacity: 1,
     },
     view: {
-      width: 380,
-      height: 380,
+      width: 550,
+      height: 550,
       opacity: 1,
     },
     text: {
-      width: 380,
-      height: 380,
+      width: 550,
+      height: 550,
       opacity: 1,
     }
   };
@@ -107,11 +107,11 @@ export default function CustomCursor() {
         alignItems: 'center',
         justifyContent: 'center',
         mixBlendMode: 'screen',
-        background: 'radial-gradient(circle, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 40%, rgba(255, 255, 255, 0) 80%)',
+        background: 'radial-gradient(circle, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.08) 35%, rgba(255, 255, 255, 0.01) 65%, rgba(255, 255, 255, 0) 85%)',
       }}
       animate={cursorType}
       variants={cursorVariants}
-      transition={{ type: 'spring', stiffness: 220, damping: 28, mass: 0.7 }}
+      transition={{ type: 'spring', stiffness: 450, damping: 32, mass: 0.4 }}
     >
       {isViewOrText && (
         <motion.span
