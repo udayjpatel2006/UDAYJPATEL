@@ -13,6 +13,7 @@ const PHOTO_DATA = [
     url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop",
     sizeClass: "md:col-span-2 md:row-span-1",
     settings: "28mm • f/4.0 • 1/200s • ISO 100",
+    isHighlight: 1,
   },
   {
     id: 2,
@@ -22,6 +23,7 @@ const PHOTO_DATA = [
     url: "https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200&auto=format&fit=crop",
     sizeClass: "md:col-span-1 md:row-span-2",
     settings: "35mm • f/2.0 • 1/400s • ISO 100",
+    isHighlight: 1,
   },
   {
     id: 3,
@@ -31,6 +33,7 @@ const PHOTO_DATA = [
     url: "https://images.unsplash.com/photo-1488161628813-04466f872be2?q=80&w=1200&auto=format&fit=crop",
     sizeClass: "md:col-span-1 md:row-span-1",
     settings: "85mm • f/1.4 • 1/1250s • ISO 100",
+    isHighlight: 1,
   },
   {
     id: 4,
@@ -40,6 +43,7 @@ const PHOTO_DATA = [
     url: "https://images.unsplash.com/photo-1520175480921-4edfa2983e0f?q=80&w=1200&auto=format&fit=crop",
     sizeClass: "md:col-span-2 md:row-span-2",
     settings: "50mm • f/1.8 • 1/320s • ISO 200",
+    isHighlight: 0,
   },
   {
     id: 5,
@@ -49,6 +53,7 @@ const PHOTO_DATA = [
     url: "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=1200&auto=format&fit=crop",
     sizeClass: "md:col-span-1 md:row-span-1",
     settings: "24mm • f/2.8 • 1/500s • ISO 100",
+    isHighlight: 0,
   },
   {
     id: 6,
@@ -58,6 +63,7 @@ const PHOTO_DATA = [
     url: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?q=80&w=1200&auto=format&fit=crop",
     sizeClass: "md:col-span-1 md:row-span-1",
     settings: "35mm • f/2.8 • 1/30s • ISO 1600",
+    isHighlight: 0,
   },
   {
     id: 7,
@@ -67,6 +73,7 @@ const PHOTO_DATA = [
     url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1200&auto=format&fit=crop",
     sizeClass: "md:col-span-1 md:row-span-2",
     settings: "50mm • f/1.8 • 1/250s • ISO 400",
+    isHighlight: 0,
   },
   {
     id: 8,
@@ -76,6 +83,7 @@ const PHOTO_DATA = [
     url: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=1200&auto=format&fit=crop",
     sizeClass: "md:col-span-2 md:row-span-1",
     settings: "16mm • f/8.0 • 1/160s • ISO 100",
+    isHighlight: 0,
   },
 ];
 
@@ -96,12 +104,8 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
   }, []);
 
   const highlights = useMemo(() => {
-    return photoList.filter(photo => photo.isHighlight === 1);
+    return photoList.filter(photo => photo.isHighlight == 1);
   }, [photoList]);
-
-  const highlightsToDisplay = useMemo(() => {
-    return highlights.length > 0 ? highlights : photoList.slice(0, 3);
-  }, [highlights, photoList]);
 
   const categories = useMemo(() => {
     return ["All", ...subsections];
@@ -130,7 +134,7 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
   return (
     <section id="gallery" className="w-full max-w-7xl mx-auto px-6 py-12">
       {/* Highlights Showcase */}
-      {highlightsToDisplay.length > 0 && (
+      {highlights.length > 0 && (
         <div className="mb-20">
           <div className="flex flex-col mb-8">
             <h3 className="font-display text-2xl font-bold tracking-tight text-white uppercase">
@@ -139,7 +143,7 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {highlightsToDisplay.map((photo) => (
+            {highlights.map((photo) => (
               <motion.div
                 key={`highlight-${photo.id}`}
                 onClick={() => onPhotoClick(photo)}
