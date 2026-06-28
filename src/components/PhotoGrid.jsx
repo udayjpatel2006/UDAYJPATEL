@@ -171,7 +171,7 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
       {highlights.length > 0 && (
         <div className="mb-20">
           <div className="flex flex-col mb-8">
-            <h3 className="font-display text-2xl font-bold tracking-tight text-white uppercase">
+            <h3 className="font-display text-gallery font-bold tracking-tight text-white uppercase">
               <CinematicTextReveal text={profileData.highlightsTitle || "Featured Highlights"} />
             </h3>
           </div>
@@ -233,7 +233,7 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
       {/* Category Filter Navbar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
         <div>
-          <h2 className="font-display text-2xl font-bold tracking-tight text-white">
+          <h2 className="font-display text-gallery font-bold tracking-tight text-white">
             <CinematicTextReveal text={profileData.galleryTitle || "Visual Archive"} />
           </h2>
           <motion.p 

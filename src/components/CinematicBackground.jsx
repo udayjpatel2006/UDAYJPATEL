@@ -144,8 +144,13 @@ export default function CinematicBackground() {
     const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
     camera.position.z = 8;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Detect device preferences and capability
+    const isMobile = window.matchMedia('(pointer: coarse)').matches || width < 768;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, alpha: false, powerPreference: "high-performance" });
+    // Lower pixel ratio on mobile and limit high-dpi devices to reduce shader processing overhead
+    renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 1.25));
     renderer.setSize(width, height);
     containerRef.current.appendChild(renderer.domElement);
 
@@ -283,6 +288,12 @@ export default function CinematicBackground() {
     let animationFrameId;
 
     const tick = () => {
+      if (prefersReducedMotion) {
+        // Render once statically and bypass loop
+        renderer.render(scene, camera);
+        return;
+      }
+
       const elapsedTime = clock.getElapsedTime();
       
       // Update background shader time

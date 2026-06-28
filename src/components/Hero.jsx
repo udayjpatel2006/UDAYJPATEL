@@ -1,6 +1,6 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Instagram, Mail, ArrowUpRight, Globe, Camera } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Instagram, Mail, ArrowUpRight, Globe, Camera, Menu, X } from 'lucide-react';
 import profileImg from '../../imgs/20260305_121542.jpg';
 
 const containerVariants = {
@@ -40,6 +40,7 @@ const imageVariants = {
 };
 
 export default function Hero({ profileData = {} }) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const {
     name = "UDAYJPATEL",
     tagline = "Cinematic Travel & Adventure Photographer",
@@ -77,7 +78,14 @@ export default function Hero({ profileData = {} }) {
           <a href="#about" className="hover:text-white transition-colors duration-300" data-cursor="pointer">About</a>
           <a href="#contact" className="hover:text-white transition-colors duration-300" data-cursor="pointer">Contact</a>
         </nav>
-        <div className="w-[100px] md:hidden" /> {/* Spacer for alignment */}
+        {/* Hamburger Menu Toggle for Mobile */}
+        <button
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="md:hidden text-[#8c8c8c] hover:text-white transition-colors p-2 z-[60] cursor-pointer"
+          aria-label="Toggle menu"
+        >
+          {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
       </motion.div>
 
       {/* Main Grid Hero */}
@@ -90,7 +98,7 @@ export default function Hero({ profileData = {} }) {
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
               {tagline}
             </span>
-            <h1 className="font-display text-3xl sm:text-5xl md:text-6xl xl:text-7xl font-bold tracking-tight leading-[1.05] text-white">
+            <h1 className="font-display text-hero font-bold tracking-tight leading-[1.05] text-white">
               {titleLine1} <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/80 to-white/40">{titleLine2}</span>
             </h1>
@@ -173,6 +181,63 @@ export default function Hero({ profileData = {} }) {
       </div>
 
       </div>
+
+      {/* Mobile Navigation Overlay */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="fixed inset-0 bg-neutral-950/98 backdrop-blur-xl z-50 flex flex-col items-center justify-center space-y-8 md:hidden"
+          >
+            <nav className="flex flex-col items-center space-y-8 text-lg font-medium uppercase tracking-[0.3em] text-[#8c8c8c]">
+              <a
+                href="#gallery"
+                onClick={() => setIsMenuOpen(false)}
+                className="hover:text-white transition-colors duration-300 py-2 cursor-pointer"
+              >
+                Gallery
+              </a>
+              <a
+                href="#about"
+                onClick={() => setIsMenuOpen(false)}
+                className="hover:text-white transition-colors duration-300 py-2 cursor-pointer"
+              >
+                About
+              </a>
+              <a
+                href="#contact"
+                onClick={() => setIsMenuOpen(false)}
+                className="hover:text-white transition-colors duration-300 py-2 cursor-pointer"
+              >
+                Contact
+              </a>
+            </nav>
+            
+            {/* Socials & Email links in mobile menu */}
+            <div className="flex items-center space-x-6 pt-8 border-t border-white/5 w-1/2 justify-center">
+              {profileData.instaUrl && (
+                <a
+                  href={profileData.instaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#8c8c8c] hover:text-white transition-colors cursor-pointer"
+                >
+                  <Instagram className="w-5 h-5" />
+                </a>
+              )}
+              <a
+                href={`mailto:${email}`}
+                className="text-[#8c8c8c] hover:text-white transition-colors cursor-pointer"
+              >
+                <Mail className="w-5 h-5" />
+              </a>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Decorative footer line */}
       <motion.div 

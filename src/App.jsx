@@ -436,7 +436,7 @@ export default function App() {
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           <div className="lg:col-span-4">
-            <h2 className="font-display text-3xl font-bold tracking-tight text-white leading-tight">
+            <h2 className="font-display text-section font-bold tracking-tight text-white leading-tight">
               <CinematicTextReveal text={profileData.aboutTitle || "Chasing the golden hour across distant horizons."} />
             </h2>
           </div>
@@ -481,7 +481,7 @@ export default function App() {
               >
                 INQUIRIES
               </motion.span>
-              <h2 className="font-display text-3xl sm:text-5xl font-bold tracking-tight text-white leading-tight">
+              <h2 className="font-display text-section font-bold tracking-tight text-white leading-tight">
                 <CinematicTextReveal text={profileData.inquiriesTitle || "Let's capture the next adventure."} />
               </h2>
             </div>

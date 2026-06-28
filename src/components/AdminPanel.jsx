@@ -367,7 +367,7 @@ export default function AdminPanel({
     }
   };
 
-  // Convert and handle direct local image uploads as Base64 strings with compression and EXIF metadata extraction
+  // Convert and handle direct local image uploads as Base64 strings with compression and EXIF metadata extraction, sending files to disk storage
   const handleImageUpload = async (e, targetForm) => {
     const file = e.target.files[0];
     if (file) {
@@ -380,16 +380,35 @@ export default function AdminPanel({
       try {
         const result = await processAndCorrectImage(file);
         
+        // Upload the corrected base64 to server
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({
+            dataUrl: result.dataUrl,
+            filename: file.name
+          })
+        });
+        
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) {
+          throw new Error(uploadData.error || 'Failed to upload image file to server');
+        }
+        const fileUrl = uploadData.url;
+        
         if (targetForm === 'profile') {
-          setProfileForm(prev => ({ ...prev, photoUrl: result.dataUrl }));
-          triggerSuccess('Local profile image loaded, corrected, and compressed!');
+          setProfileForm(prev => ({ ...prev, photoUrl: fileUrl }));
+          triggerSuccess('Profile image uploaded and optimized successfully!');
         } else if (targetForm === 'photo') {
           setPhotoForm(prev => ({ 
             ...prev, 
-            url: result.dataUrl,
+            url: fileUrl,
             settings: result.settings
           }));
-          triggerSuccess('Local gallery image loaded, corrected, and compressed!');
+          triggerSuccess('Gallery image uploaded and optimized successfully!');
         }
       } catch (error) {
         console.error('Failed to process image:', error);
@@ -564,11 +583,31 @@ export default function AdminPanel({
       try {
         const result = await processAndCorrectImage(file);
         const title = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        
+        // Upload the corrected base64 to server
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({
+            dataUrl: result.dataUrl,
+            filename: file.name
+          })
+        });
+        
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) {
+          throw new Error(uploadData.error || 'Upload failed');
+        }
+        const fileUrl = uploadData.url;
+
         loadedPhotos.push({
           title: title,
           category: category,
           location: profileData.location || "Available Worldwide",
-          url: result.dataUrl,
+          url: fileUrl,
           sizeClass: 'md:col-span-1 md:row-span-1',
           settings: result.settings
         });

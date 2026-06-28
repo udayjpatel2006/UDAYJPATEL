@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -79,6 +80,9 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '100mb' }));
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 
+// Serve uploaded images from 'uploads' directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Serve static assets from 'dist' in production
 app.use(express.static(path.join(__dirname, 'dist')));
 
@@ -91,6 +95,74 @@ app.use((req, res, next) => {
 });
 
 let db;
+
+async function migrateBase64ToFiles(db) {
+  const uploadsDir = path.join(__dirname, 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  // 1. Migrate profile settings photo
+  try {
+    const profilePhotoRow = await db.get("SELECT value FROM profile_settings WHERE key = 'photoUrl'");
+    if (profilePhotoRow && profilePhotoRow.value && profilePhotoRow.value.startsWith('data:image/')) {
+      const dataUrl = profilePhotoRow.value;
+      const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const mimeType = matches[1];
+        const base64Data = matches[2];
+        const buffer = Buffer.from(base64Data, 'base64');
+        
+        let extension = 'jpg';
+        if (mimeType.includes('png')) extension = 'png';
+        else if (mimeType.includes('webp')) extension = 'webp';
+        
+        const filename = `profile-${Date.now()}.${extension}`;
+        fs.writeFileSync(path.join(uploadsDir, filename), buffer);
+        
+        const newUrl = `/uploads/${filename}`;
+        await db.run("UPDATE profile_settings SET value = ? WHERE key = 'photoUrl'", [newUrl]);
+        console.log(`[MIGRATION] Migrated profile photo to disk: ${newUrl}`);
+      }
+    }
+  } catch (err) {
+    console.error('[MIGRATION ERROR] Profile photo migration failed:', err);
+  }
+
+  // 2. Migrate photos database
+  try {
+    const photos = await db.all("SELECT id, title, url FROM photos");
+    let migratedCount = 0;
+    for (const photo of photos) {
+      if (photo.url && photo.url.startsWith('data:image/')) {
+        const dataUrl = photo.url;
+        const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          const mimeType = matches[1];
+          const base64Data = matches[2];
+          const buffer = Buffer.from(base64Data, 'base64');
+          
+          let extension = 'jpg';
+          if (mimeType.includes('png')) extension = 'png';
+          else if (mimeType.includes('webp')) extension = 'webp';
+          
+          const cleanTitle = (photo.title || 'photo').replace(/[^A-Za-z0-9]/g, '_').substring(0, 30);
+          const filename = `${cleanTitle}-${photo.id}-${Date.now()}.${extension}`;
+          fs.writeFileSync(path.join(uploadsDir, filename), buffer);
+          
+          const newUrl = `/uploads/${filename}`;
+          await db.run("UPDATE photos SET url = ? WHERE id = ?", [newUrl, photo.id]);
+          migratedCount++;
+        }
+      }
+    }
+    if (migratedCount > 0) {
+      console.log(`[MIGRATION] Migrated ${migratedCount} photos from Base64 to disk files.`);
+    }
+  } catch (err) {
+    console.error('[MIGRATION ERROR] Photos table migration failed:', err);
+  }
+}
 
 async function initDb() {
   const dbPath = path.join(__dirname, 'database.sqlite');
@@ -314,6 +386,9 @@ async function initDb() {
     }
     await stmt.finalize();
   }
+
+  // Run Base64 to disk files migration on startup
+  await migrateBase64ToFiles(db);
 }
 
 // ---------------- API ENDPOINTS ----------------
@@ -353,6 +428,65 @@ function requireAuth(req, res, next) {
   activeSessions.set(token, new Date(Date.now() + 2 * 60 * 60 * 1000));
   next();
 }
+
+// File Upload Endpoint (Saves Base64 payload to uploads/ directory on server disk)
+app.post('/api/upload', requireAuth, async (req, res) => {
+  try {
+    const { dataUrl, filename } = req.body;
+    if (!dataUrl) {
+      return res.status(400).json({ error: 'dataUrl is required.' });
+    }
+    
+    // Parse the data URL
+    const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      return res.status(400).json({ error: 'Invalid dataUrl format.' });
+    }
+    
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    // Determine extension
+    let extension = 'jpg';
+    if (mimeType.includes('png')) extension = 'png';
+    else if (mimeType.includes('webp')) extension = 'webp';
+    else if (mimeType.includes('gif')) extension = 'gif';
+    
+    // Generate safe unique filename
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const cleanFilename = filename 
+      ? filename.replace(/[^A-Za-z0-9]/g, '_').substring(0, 50) 
+      : 'image';
+    const finalFilename = `${cleanFilename}-${uniqueSuffix}.${extension}`;
+    
+    // Ensure uploads directory exists
+    const uploadsDir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    
+    // Also ensure dist/uploads exists in production, so static assets server can find it
+    const distUploadsDir = path.join(__dirname, 'dist', 'uploads');
+    if (!fs.existsSync(distUploadsDir)) {
+      fs.mkdirSync(distUploadsDir, { recursive: true });
+    }
+    
+    const filePath = path.join(uploadsDir, finalFilename);
+    const distFilePath = path.join(distUploadsDir, finalFilename);
+    
+    // Write file to uploads/
+    fs.writeFileSync(filePath, buffer);
+    // Write file to dist/uploads/ (so it's available immediately in production or dev preview)
+    fs.writeFileSync(distFilePath, buffer);
+    
+    // Return relative URL
+    res.json({ success: true, url: `/uploads/${finalFilename}` });
+  } catch (err) {
+    console.error('[ERROR] Failed to save uploaded image file:', err);
+    res.status(500).json({ error: 'Failed to save uploaded image file.' });
+  }
+});
 
 // Admin login endpoint
 app.post('/api/login', async (req, res) => {
