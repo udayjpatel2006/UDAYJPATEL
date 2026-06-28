@@ -78,21 +78,19 @@ img {
   pointer-events: none !important;
 }
 
-/* Gallery image performance optimizations */
+/* Gallery image performance optimizations and smooth transitions */
 .gallery-image {
   transform: scale(1);
   will-change: transform, filter;
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), filter 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Only apply smooth filter and scale transitions on devices with true hover support (desktops) */
-@media (hover: hover) {
-  .gallery-image {
-    transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), filter 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .group:hover .gallery-image-hover-effect {
-    transform: scale(1.05);
-    filter: none !important;
-  }
+/* Color reveal and scale effect on hover and active touch states */
+.group:hover .gallery-image-hover-effect,
+.group:active .gallery-image-hover-effect,
+.group:focus .gallery-image-hover-effect {
+  transform: scale(1.05);
+  filter: none !important;
 }
 
 /* Hide scrollbar utility */

@@ -181,6 +181,7 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
               <motion.div
                 key={`highlight-${photo.id}`}
                 onClick={() => onPhotoClick(photo)}
+                onTouchStart={() => {}}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-100px" }}
@@ -296,6 +297,7 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
               layout={!isMobile ? "position" : false}
               key={photo.id}
               onClick={() => onPhotoClick(photo)}
+              onTouchStart={() => {}}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
