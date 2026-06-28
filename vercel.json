@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "dist/**",
+          "uploads/**",
+          "database.sqlite"
+        ]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(uploads/.*)",
+      "dest": "$1"
+    },
+    {
+      "src": "/(assets/.*)",
+      "dest": "dist/$1"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "server.js"
+    }
+  ]
+}

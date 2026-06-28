@@ -71,3 +71,21 @@ Start the production server:
 ```bash
 npm start
 ```
+
+---
+
+## ☁️ Deployment on Vercel
+
+Vercel is a serverless hosting provider that runs on an ephemeral (temporary) file system. Because all of your uploaded photos, locations, and settings are **already saved locally inside the committed `/uploads/` folder and `database.sqlite` file**, Vercel will serve your portfolio flawlessly in **read-only mode**:
+- **Existing Content**: All your photos, locations, settings, and categories will load and display perfectly.
+- **Updating Content / Uploading New Photos**:
+  1. Run the project locally on your machine (`npm run dev`).
+  2. Upload new photos and arrange their grid positions through your local admin panel (`http://localhost:3000/admin`).
+  3. Commit and push the updated `database.sqlite` and the new image assets inside the `uploads/` directory to GitHub.
+  4. Vercel will automatically trigger a redeploy, showing your new content online within seconds!
+
+### ⚙️ Vercel Import Steps
+1. Log in to [Vercel](https://vercel.com/) and click **Add New** -> **Project**.
+2. Select your repository: `udayjpatel-portfolio`.
+3. Vercel will automatically parse the `vercel.json` file.
+4. Click **Deploy**. Your site will be online in about 1-2 minutes!
