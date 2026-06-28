@@ -9,9 +9,17 @@ import crypto from 'crypto';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import fs from 'fs';
+import { v2 as cloudinary } from 'cloudinary';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'udayjpatel',
+  api_key: process.env.CLOUDINARY_API_KEY || '689444139574263',
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'YeNGtw1j9Xr7-Lj3TiN_hf6ICfk'
+});
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -429,62 +437,25 @@ function requireAuth(req, res, next) {
   next();
 }
 
-// File Upload Endpoint (Saves Base64 payload to uploads/ directory on server disk)
+// File Upload Endpoint (Uploads Base64 payload to Cloudinary)
 app.post('/api/upload', requireAuth, async (req, res) => {
   try {
-    const { dataUrl, filename } = req.body;
+    const { dataUrl } = req.body;
     if (!dataUrl) {
       return res.status(400).json({ error: 'dataUrl is required.' });
     }
     
-    // Parse the data URL
-    const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (!matches || matches.length !== 3) {
-      return res.status(400).json({ error: 'Invalid dataUrl format.' });
-    }
+    // Upload to Cloudinary
+    const uploadResponse = await cloudinary.uploader.upload(dataUrl, {
+      folder: 'portfolio',
+      resource_type: 'auto'
+    });
     
-    const mimeType = matches[1];
-    const base64Data = matches[2];
-    const buffer = Buffer.from(base64Data, 'base64');
-    
-    // Determine extension
-    let extension = 'jpg';
-    if (mimeType.includes('png')) extension = 'png';
-    else if (mimeType.includes('webp')) extension = 'webp';
-    else if (mimeType.includes('gif')) extension = 'gif';
-    
-    // Generate safe unique filename
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const cleanFilename = filename 
-      ? filename.replace(/[^A-Za-z0-9]/g, '_').substring(0, 50) 
-      : 'image';
-    const finalFilename = `${cleanFilename}-${uniqueSuffix}.${extension}`;
-    
-    // Ensure uploads directory exists
-    const uploadsDir = path.join(__dirname, 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-    
-    // Also ensure dist/uploads exists in production, so static assets server can find it
-    const distUploadsDir = path.join(__dirname, 'dist', 'uploads');
-    if (!fs.existsSync(distUploadsDir)) {
-      fs.mkdirSync(distUploadsDir, { recursive: true });
-    }
-    
-    const filePath = path.join(uploadsDir, finalFilename);
-    const distFilePath = path.join(distUploadsDir, finalFilename);
-    
-    // Write file to uploads/
-    fs.writeFileSync(filePath, buffer);
-    // Write file to dist/uploads/ (so it's available immediately in production or dev preview)
-    fs.writeFileSync(distFilePath, buffer);
-    
-    // Return relative URL
-    res.json({ success: true, url: `/uploads/${finalFilename}` });
+    // Return the secure URL from Cloudinary
+    res.json({ success: true, url: uploadResponse.secure_url });
   } catch (err) {
-    console.error('[ERROR] Failed to save uploaded image file:', err);
-    res.status(500).json({ error: 'Failed to save uploaded image file.' });
+    console.error('[ERROR] Failed to upload image to Cloudinary:', err);
+    res.status(500).json({ error: `Cloudinary upload failed: ${err.message || err}` });
   }
 });
 

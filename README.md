@@ -132,16 +132,20 @@ npm start
 
 ## ☁️ Deployment on Vercel
 
-Vercel is a serverless hosting provider that runs on an ephemeral (temporary) file system. Because all of your uploaded photos, locations, and settings are **already saved locally inside the committed `/uploads/` folder and `database.sqlite` file**, Vercel will serve your portfolio flawlessly in **read-only mode**:
-- **Existing Content**: All your photos, locations, settings, and categories will load and display perfectly.
-- **Updating Content / Uploading New Photos**:
-  1. Run the project locally on your machine (`npm run dev`).
-  2. Upload new photos and arrange their grid positions through your local admin panel (`http://localhost:3000/admin`).
-  3. Commit and push the updated `database.sqlite` and the new image assets inside the `uploads/` directory to GitHub.
-  4. Vercel will automatically trigger a redeploy, showing your new content online within seconds!
+Vercel is a serverless hosting provider that runs on an ephemeral (temporary) file system. This project is fully configured to use **Cloudinary** for runtime image uploads:
+- **Cloud Image Hosting**: All new image uploads are sent straight to Cloudinary and served globally via secure HTTPS URLs, ensuring uploads are fully persistent.
+- **Persistent Database**: Because the SQLite database is read-only on Vercel, any changes to photo list layouts, position orders, profile titles, or custom categories should be synchronized using the Git workflow:
+  1. Run the project locally on your machine (`npm.cmd run dev`).
+  2. Upload new photos (they will be sent to Cloudinary) and arrange grid positions through your local admin panel (`http://localhost:3000/admin`).
+  3. Commit and push the updated `database.sqlite` file to GitHub.
+  4. Vercel will automatically redeploy the site, showing your new photos online immediately!
 
 ### ⚙️ Vercel Import Steps
 1. Log in to [Vercel](https://vercel.com/) and click **Add New** -> **Project**.
 2. Select your repository: `UDAYJPATEL`.
 3. Vercel will automatically parse the `vercel.json` file.
-4. Click **Deploy**. Your site will be online in about 1-2 minutes!
+4. Set the following **Environment Variables** in the Vercel project settings:
+   - `CLOUDINARY_CLOUD_NAME`: (Your Cloudinary cloud name)
+   - `CLOUDINARY_API_KEY`: `689444139574263`
+   - `CLOUDINARY_API_SECRET`: `YeNGtw1j9Xr7-Lj3TiN_hf6ICfk`
+5. Click **Deploy**. Your site will be online in about 1-2 minutes!
