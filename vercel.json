@@ -8,7 +8,8 @@
         "includeFiles": [
           "dist/**",
           "uploads/**",
-          "database.sqlite"
+          "database.sqlite",
+          "node_modules/sqlite3/**"
         ]
       }
     }

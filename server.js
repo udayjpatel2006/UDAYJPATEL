@@ -752,11 +752,20 @@ app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// Initialize and Listen
-initDb().then(() => {
+// Initialize database connection using top-level await
+try {
+  await initDb();
+  console.log(`[LOG] [${new Date().toISOString()}] Database initialized successfully.`);
+} catch (err) {
+  console.error(`[CRITICAL ERROR] [${new Date().toISOString()}] Failed to start database:`, err);
+}
+
+// Only listen on port if not running in a serverless environment (Vercel)
+if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`[LOG] [${new Date().toISOString()}] Backend server listening on http://localhost:${PORT}`);
   });
-}).catch(err => {
-  console.error(`[CRITICAL ERROR] [${new Date().toISOString()}] Failed to start database/server:`, err);
-});
+}
+
+// Export the Express app as the default handler for Vercel
+export default app;
