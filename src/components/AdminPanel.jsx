@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trash2, Edit3, Plus, RotateCcw, Download, Upload, Lock, Unlock, Check, Image } from 'lucide-react';
-import ExifReader from 'exifreader';
+import { processAndCorrectImage } from '../utils/imageProcessor';
 
 const TablePositionInput = ({ photo, photoList, onUpdatePhotos }) => {
   const [val, setVal] = useState(photo.position !== undefined && photo.position !== null ? photo.position : '');
@@ -116,6 +116,7 @@ export default function AdminPanel({
   const [errorMsg, setErrorMsg] = useState('');
   const [activeTab, setActiveTab] = useState('profile');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const [filterCategory, setFilterCategory] = useState('All');
 
   // Local state for profile inputs
@@ -236,120 +237,27 @@ export default function AdminPanel({
         return;
       }
 
-      let extractedSettings = null;
-      let orientation = 1;
+      setIsUploading(true);
       try {
-        const tags = await ExifReader.load(file);
-        if (tags && tags.Orientation) {
-          orientation = parseInt(tags.Orientation.value || tags.Orientation.description, 10) || 1;
-        }
-
-        if (targetForm === 'photo') {
-          let focalLength = '';
-          if (tags.FocalLength) {
-            focalLength = String(tags.FocalLength.description).replace(/\s+/g, '');
-            if (!focalLength.toLowerCase().endsWith('mm')) focalLength += 'mm';
-          }
-          
-          let aperture = '';
-          if (tags.FNumber) {
-            const desc = String(tags.FNumber.description).trim();
-            aperture = desc.toLowerCase().startsWith('f/') ? desc : `f/${desc}`;
-          }
-          
-          let shutterSpeed = '';
-          if (tags.ExposureTime) {
-            const desc = String(tags.ExposureTime.description).trim();
-            shutterSpeed = desc.endsWith('s') ? desc : `${desc}s`;
-          }
-          
-          let iso = '';
-          const isoTag = tags.ISOSpeedRatings || tags.PhotographicSensitivity;
-          if (isoTag) {
-            const desc = String(isoTag.description).trim();
-            iso = desc.toLowerCase().startsWith('iso') ? desc : `ISO ${desc}`;
-          }
-          
-          const parts = [focalLength, aperture, shutterSpeed, iso].filter(Boolean);
-          if (parts.length > 0) {
-            extractedSettings = parts.join(' • ');
-          }
+        const result = await processAndCorrectImage(file);
+        
+        if (targetForm === 'profile') {
+          setProfileForm(prev => ({ ...prev, photoUrl: result.dataUrl }));
+          triggerSuccess('Local profile image loaded, corrected, and compressed!');
+        } else if (targetForm === 'photo') {
+          setPhotoForm(prev => ({ 
+            ...prev, 
+            url: result.dataUrl,
+            settings: result.settings
+          }));
+          triggerSuccess('Local gallery image loaded, corrected, and compressed!');
         }
       } catch (error) {
-        console.warn('Failed to parse EXIF metadata:', error);
+        console.error('Failed to process image:', error);
+        alert(`Failed to load and correct the image:\n\n${error.message || error}`);
+      } finally {
+        setIsUploading(false);
       }
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new window.Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 1200;
-          const MAX_HEIGHT = 1200;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-
-          if (orientation === 6 || orientation === 8) {
-            canvas.width = height;
-            canvas.height = width;
-          } else {
-            canvas.width = width;
-            canvas.height = height;
-          }
-
-          const ctx = canvas.getContext('2d');
-          
-          if (orientation === 3) {
-            ctx.translate(width, height);
-            ctx.rotate(Math.PI);
-          } else if (orientation === 6) {
-            ctx.translate(height, 0);
-            ctx.rotate(Math.PI / 2);
-          } else if (orientation === 8) {
-            ctx.translate(0, width);
-            ctx.rotate(-Math.PI / 2);
-          }
-
-          ctx.drawImage(img, 0, 0, width, height);
-
-          // Compress to JPEG with 0.75 quality
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
-
-          if (targetForm === 'profile') {
-            setProfileForm(prev => ({ ...prev, photoUrl: compressedDataUrl }));
-            triggerSuccess('Local profile image loaded and compressed!');
-          } else if (targetForm === 'photo') {
-            setPhotoForm(prev => ({ 
-              ...prev, 
-              url: compressedDataUrl,
-              ...(extractedSettings ? { settings: extractedSettings } : {})
-            }));
-            triggerSuccess(extractedSettings 
-              ? 'Local gallery image loaded with EXIF metadata!' 
-              : 'Local gallery image loaded and compressed!');
-          }
-        };
-        img.onerror = () => {
-          alert("Failed to load image. Please select a valid image file.");
-        };
-        img.src = event.target.result;
-      };
-      reader.onerror = () => {
-        alert("Failed to read file.");
-      };
-      reader.readAsDataURL(file);
     }
   };
 
@@ -498,170 +406,73 @@ export default function AdminPanel({
     setSubsectionToDelete(name);
   };
 
-  const handleBulkImageUpload = (e, category) => {
+  const handleBulkImageUpload = async (e, category) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     
+    setIsUploading(true);
     const oversizedFiles = files.filter(f => f.size > 1048576 * 25);
     if (oversizedFiles.length > 0) {
       alert("Some files exceed 25MB and were skipped.");
     }
     
     const validFiles = files.filter(f => f.size <= 1048576 * 25);
-    let loadedPhotos = [];
-    let processedCount = 0;
+    const loadedPhotos = [];
+    const errors = [];
     
-    validFiles.forEach((file) => {
-      ExifReader.load(file).then(tags => {
-        let focalLength = '';
-        if (tags.FocalLength) {
-          focalLength = String(tags.FocalLength.description).replace(/\s+/g, '');
-          if (!focalLength.toLowerCase().endsWith('mm')) focalLength += 'mm';
-        }
-        
-        let aperture = '';
-        if (tags.FNumber) {
-          const desc = String(tags.FNumber.description).trim();
-          aperture = desc.toLowerCase().startsWith('f/') ? desc : `f/${desc}`;
-        }
-        
-        let shutterSpeed = '';
-        if (tags.ExposureTime) {
-          const desc = String(tags.ExposureTime.description).trim();
-          shutterSpeed = desc.endsWith('s') ? desc : `${desc}s`;
-        }
-        
-        let iso = '';
-        const isoTag = tags.ISOSpeedRatings || tags.PhotographicSensitivity;
-        if (isoTag) {
-          const desc = String(isoTag.description).trim();
-          iso = desc.toLowerCase().startsWith('iso') ? desc : `ISO ${desc}`;
-        }
-        
-        const parts = [focalLength, aperture, shutterSpeed, iso].filter(Boolean);
-        const settings = parts.length > 0 ? parts.join(' • ') : '50mm • f/2.0 • 1/500s • ISO 100';
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const img = new window.Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 1200;
-            const MAX_HEIGHT = 1200;
-            let width = img.width;
-            let height = img.height;
-            
-            if (width > height) {
-              if (width > MAX_WIDTH) {
-                height *= MAX_WIDTH / width;
-                width = MAX_WIDTH;
-              }
-            } else {
-              if (height > MAX_HEIGHT) {
-                width *= MAX_HEIGHT / height;
-                height = MAX_HEIGHT;
-              }
-            }
-            
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
-            const title = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-            
-            loadedPhotos.push({
-              title: title,
-              category: category,
-              location: profileData.location || "Available Worldwide",
-              url: compressedDataUrl,
-              sizeClass: 'md:col-span-1 md:row-span-1',
-              settings: settings
-            });
-            
-            processedCount++;
-            if (processedCount === validFiles.length) {
-              let currentPhotos = [...photoList];
-              let startId = currentPhotos.length > 0 ? Math.max(...currentPhotos.map(p => p.id)) + 1 : 1;
-              
-              const newPhotosWithIds = loadedPhotos.map((p, idx) => ({
-                id: startId + idx,
-                ...p
-              }));
-              
-              onUpdatePhotos([...currentPhotos, ...newPhotosWithIds]);
-              triggerSuccess(`Successfully uploaded and compressed ${newPhotosWithIds.length} images into "${category}"!`);
-            }
-          };
-          img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-      }).catch(err => {
-        console.warn('Failed to parse EXIF metadata for file:', file.name, err);
-        const settings = '50mm • f/2.0 • 1/500s • ISO 100';
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const img = new window.Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 1200;
-            const MAX_HEIGHT = 1200;
-            let width = img.width;
-            let height = img.height;
-            
-            if (width > height) {
-              if (width > MAX_WIDTH) {
-                height *= MAX_WIDTH / width;
-                width = MAX_WIDTH;
-              }
-            } else {
-              if (height > MAX_HEIGHT) {
-                width *= MAX_HEIGHT / height;
-                height = MAX_HEIGHT;
-              }
-            }
-            
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
-            const title = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-            
-            loadedPhotos.push({
-              title: title,
-              category: category,
-              location: profileData.location || "Available Worldwide",
-              url: compressedDataUrl,
-              sizeClass: 'md:col-span-1 md:row-span-1',
-              settings: settings
-            });
-            
-            processedCount++;
-            if (processedCount === validFiles.length) {
-              let currentPhotos = [...photoList];
-              let startId = currentPhotos.length > 0 ? Math.max(...currentPhotos.map(p => p.id)) + 1 : 1;
-              
-              const newPhotosWithIds = loadedPhotos.map((p, idx) => ({
-                id: startId + idx,
-                ...p
-              }));
-              
-              onUpdatePhotos([...currentPhotos, ...newPhotosWithIds]);
-              triggerSuccess(`Successfully uploaded and compressed ${newPhotosWithIds.length} images into "${category}"!`);
-            }
-          };
-          img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-      });
-    });
+    // Process all valid files concurrently
+    await Promise.all(validFiles.map(async (file) => {
+      try {
+        const result = await processAndCorrectImage(file);
+        const title = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        loadedPhotos.push({
+          title: title,
+          category: category,
+          location: profileData.location || "Available Worldwide",
+          url: result.dataUrl,
+          sizeClass: 'md:col-span-1 md:row-span-1',
+          settings: result.settings
+        });
+      } catch (err) {
+        console.error(`Failed to process ${file.name}:`, err);
+        errors.push(`${file.name}: ${err.message || 'Unknown processing error'}`);
+      }
+    }));
+    
+    setIsUploading(false);
+    
+    if (errors.length > 0) {
+      alert(`The following images could not be corrected and were not uploaded:\n\n${errors.join('\n')}`);
+    }
+    
+    if (loadedPhotos.length > 0) {
+      let currentPhotos = [...photoList];
+      let startId = currentPhotos.length > 0 ? Math.max(...currentPhotos.map(p => p.id)) + 1 : 1;
+      
+      const newPhotosWithIds = loadedPhotos.map((p, idx) => ({
+        id: startId + idx,
+        ...p
+      }));
+      
+      onUpdatePhotos([...currentPhotos, ...newPhotosWithIds]);
+      triggerSuccess(`Successfully uploaded and corrected ${newPhotosWithIds.length} images into "${category}"!`);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-xl md:px-4 md:py-8 overflow-y-auto">
+      {isUploading && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex flex-col items-center justify-center space-y-6">
+          <div className="relative w-16 h-16">
+            <div className="absolute inset-0 rounded-full border-4 border-white/5"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-t-white animate-spin"></div>
+          </div>
+          <div className="text-center space-y-1">
+            <p className="text-white font-medium text-xs tracking-[0.2em] uppercase">Processing Images</p>
+            <p className="text-[#8c8c8c] text-[10px] uppercase tracking-wider font-light">Correcting orientation & optimizing...</p>
+          </div>
+        </div>
+      )}
       <AnimatePresence>
         {!isLoggedIn ? (
           /* Login Dialog */
@@ -919,7 +730,7 @@ export default function AdminPanel({
                           <input
                             id="profile-photo-upload"
                             type="file"
-                            accept="image/*"
+                            accept="image/*,.heic,.HEIC"
                             onChange={(e) => handleImageUpload(e, 'profile')}
                             className="hidden"
                           />
@@ -1169,7 +980,7 @@ export default function AdminPanel({
                                         id={`bulk-upload-${index}`}
                                         type="file"
                                         multiple
-                                        accept="image/*"
+                                        accept="image/*,.heic,.HEIC"
                                         onChange={(e) => handleBulkImageUpload(e, sub)}
                                         className="hidden"
                                       />
@@ -1486,7 +1297,7 @@ export default function AdminPanel({
                               <input
                                 id="gallery-photo-upload"
                                 type="file"
-                                accept="image/*"
+                                accept="image/*,.heic,.HEIC"
                                 onChange={(e) => handleImageUpload(e, 'photo')}
                                 className="hidden"
                               />
