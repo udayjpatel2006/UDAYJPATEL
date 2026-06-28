@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename);
 
 // Configure Cloudinary
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'udayjpatel',
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dmrcwtzib',
   api_key: process.env.CLOUDINARY_API_KEY || '689444139574263',
   api_secret: process.env.CLOUDINARY_API_SECRET || 'YeNGtw1j9Xr7-Lj3TiN_hf6ICfk'
 });
