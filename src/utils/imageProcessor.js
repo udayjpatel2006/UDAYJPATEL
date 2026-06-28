@@ -9,11 +9,11 @@ const loadHeic2any = async () => {
 };
 
 /**
- * Corrects image orientation and extracts metadata in the browser using HTML5 Canvas.
- * Supports JPEG, JPG, PNG, HEIC, and WebP.
+ * Reads the raw image file as a Base64 dataURL without canvas rotation/resizing.
+ * Converts HEIC to JPEG if needed, extracting settings metadata.
  * 
  * @param {File} file - The uploaded image file.
- * @returns {Promise<{ dataUrl: string, settings: string }>} - Cleansed base64 dataUrl and metadata settings
+ * @returns {Promise<{ dataUrl: string, settings: string }>} - Original dataUrl and metadata settings
  */
 export async function processAndCorrectImage(file) {
   let imageBlob = file;
@@ -21,7 +21,7 @@ export async function processAndCorrectImage(file) {
                  file.name.toLowerCase().endsWith('.heic') || 
                  file.name.toLowerCase().endsWith('.heif');
 
-  // 1. Load EXIF metadata from the original file (supports HEIC, JPG, JPEG, WebP)
+  // 1. Load EXIF metadata from the original file
   let tags = null;
   try {
     tags = await ExifReader.load(file);
@@ -36,11 +36,11 @@ export async function processAndCorrectImage(file) {
       const converted = await heic2any({
         blob: file,
         toType: 'image/jpeg',
-        quality: 0.90
+        quality: 0.95
       });
       imageBlob = Array.isArray(converted) ? converted[0] : converted;
-      
-      // If we couldn't parse tags from HEIC originally, try parsing again from converted JPEG
+
+      // Try reading tags again if original read failed
       if (!tags) {
         try {
           tags = await ExifReader.load(imageBlob);
@@ -51,12 +51,6 @@ export async function processAndCorrectImage(file) {
     } catch (err) {
       throw new Error(`HEIC conversion error: ${err.message || err}`);
     }
-  }
-
-  // Extract EXIF Orientation
-  let orientation = 1;
-  if (tags && tags.Orientation) {
-    orientation = parseInt(tags.Orientation.value || tags.Orientation.description, 10) || 1;
   }
 
   // Extract camera settings metadata for the gallery
@@ -93,97 +87,13 @@ export async function processAndCorrectImage(file) {
     }
   }
 
-  // 3. Load image into memory to draw on canvas
-  const objectUrl = URL.createObjectURL(imageBlob);
-  const img = new Image();
-  try {
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = () => reject(new Error('Image failed to load in browser memory. File may be corrupted.'));
-      img.src = objectUrl;
-    });
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
-
-  // 4. Determine dimensions and scale down if it exceeds safe canvas constraints (4096px)
-  const MAX_DIMENSION = 4096;
-  let width = img.naturalWidth || img.width;
-  let height = img.naturalHeight || img.height;
-
-  if (width === 0 || height === 0) {
-    throw new Error('Invalid image dimensions (0x0). File could be empty or invalid.');
-  }
-
-  if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-    if (width > height) {
-      height = Math.round((height * MAX_DIMENSION) / width);
-      width = MAX_DIMENSION;
-    } else {
-      width = Math.round((width * MAX_DIMENSION) / height);
-      height = MAX_DIMENSION;
-    }
-  }
-
-  // Create canvas and configure dimensions (swap width/height for 90/270 deg rotated images)
-  const canvas = document.createElement('canvas');
-  if (orientation >= 5 && orientation <= 8) {
-    canvas.width = height;
-    canvas.height = width;
-  } else {
-    canvas.width = width;
-    canvas.height = height;
-  }
-
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    throw new Error('Failed to get 2D canvas context.');
-  }
-
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-
-  // Apply EXIF orientation transform matrices
-  switch (orientation) {
-    case 2: // Horizontal flip
-      ctx.transform(-1, 0, 0, 1, width, 0);
-      break;
-    case 3: // 180 degree rotation
-      ctx.transform(-1, 0, 0, -1, width, height);
-      break;
-    case 4: // Vertical flip
-      ctx.transform(1, 0, 0, -1, 0, height);
-      break;
-    case 5: // Flip vertical + Rotate 90 CCW
-      ctx.transform(0, 1, 1, 0, 0, 0);
-      break;
-    case 6: // Rotate 90 CW
-      ctx.transform(0, 1, -1, 0, height, 0);
-      break;
-    case 7: // Flip horizontal + Rotate 90 CCW
-      ctx.transform(0, -1, -1, 0, height, width);
-      break;
-    case 8: // Rotate 90 CCW (270 CW)
-      ctx.transform(0, -1, 1, 0, 0, width);
-      break;
-    default:
-      break;
-  }
-
-  // Draw image
-  ctx.drawImage(img, 0, 0, width, height);
-
-  // 5. Export corrected image back to base64 DataURL (this strips EXIF tags automatically)
-  let outputType = isHeic ? 'image/jpeg' : file.type;
-  if (!outputType) outputType = 'image/jpeg';
-
-  let dataUrl;
-  try {
-    dataUrl = canvas.toDataURL(outputType, 0.90);
-  } catch (err) {
-    console.warn(`Failed to export canvas as ${outputType}, falling back to image/jpeg:`, err);
-    dataUrl = canvas.toDataURL('image/jpeg', 0.90);
-  }
+  // 3. Read the image blob as a Base64 dataURL (bypasses canvas completely)
+  const reader = new FileReader();
+  const dataUrl = await new Promise((resolve, reject) => {
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = () => reject(new Error('FileReader failed to read the file. File may be corrupted.'));
+    reader.readAsDataURL(imageBlob);
+  });
 
   return {
     dataUrl,
