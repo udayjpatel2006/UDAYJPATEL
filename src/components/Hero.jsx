@@ -148,7 +148,10 @@ export default function Hero({ profileData = {} }) {
         </div>
 
         {/* Right Column: Visual Frame with overlay protection */}
-        <div className="lg:col-span-5 relative w-full h-[300px] sm:h-[400px] lg:h-[550px] overflow-hidden rounded-2xl border border-white/10 group select-none">
+        <div 
+          onTouchStart={() => {}}
+          className="lg:col-span-5 relative w-full h-[300px] sm:h-[400px] lg:h-[550px] overflow-hidden rounded-2xl border border-white/10 group select-none"
+        >
           {/* Decorative frame overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent z-10 pointer-events-none" />
           
@@ -156,7 +159,7 @@ export default function Hero({ profileData = {} }) {
                 variants={imageVariants}
                 src={photoUrl} 
                 alt={`${name} — Profile`} 
-                className="w-full h-full object-cover filter grayscale contrast-[1.1] brightness-[0.95] group-hover:scale-105 group-hover:filter-none transition-all duration-700 ease-out object-center pointer-events-none select-none"
+                className="w-full h-full object-cover filter grayscale contrast-[1.1] brightness-[0.95] gallery-image gallery-image-hover-effect object-center pointer-events-none select-none"
               />
 
               {/* Transparent protection overlay to block save/drag */}
