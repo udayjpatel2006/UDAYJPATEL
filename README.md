@@ -1,40 +1,92 @@
-# Odyssey: Premium Cinematic Travel & Adventure Photography Portfolio
+# 📷 Odyssey: Premium Cinematic Travel & Adventure Photography Portfolio
 
-Odyssey is a premium, state-of-the-art photography portfolio and administrative content management system. Crafted for visual storytellers, it features a fluid, highly responsive frontend, high-performance WebGL animations, and a secure backend admin panel designed for lightning-fast image delivery and intuitive collection management.
+Odyssey is a premium, state-of-the-art photography portfolio and administrative content management system (CMS). Designed for visual storytellers, it combines an immersive, responsive frontend with a secure, highly optimized backend to deliver high-resolution imagery seamlessly.
 
 ---
 
-## 🚀 Key Features
+## 🌟 Key Features
 
-### 🌌 Immersive Front-End
-- **Fluid Sizing & Typography**: Custom responsive design system using CSS `clamp()` scaling, supporting viewports from mobile (320px) up to ultra-wide displays (2560px+) seamlessly.
-- **WebGL Cinematic Background**: Ambient, GPU-accelerated auroral smoke wave and floating interactive particle field using Three.js. Supports the `prefers-reduced-motion` media feature, stopping the animation loop automatically to preserve CPU/GPU cycles.
-- **Masonry Bento Layout**: A visual grid implementation for the homepage gallery and Featured Highlights section, stacking unequal aspect ratio portraits/landscapes without empty spaces or cell gaps.
-- **Animated Hamburger Menu**: Dynamic sliding mobile navigation drawer using Framer Motion for responsive menu access.
-- **Image Theft Protection**: Direct context menu clicks, user text/image selection, and image drag events are natively blocked to deter casual saving of original creative work.
+### 🌌 Immersive Cinematic Front-End
+- **WebGL Interactive Background**: A custom, GPU-accelerated atmospheric smoke wave and floating interactive particle field using **Three.js**. Automatically checks user system accessibility preferences (`prefers-reduced-motion`) and halts animation loops to conserve CPU/GPU cycles.
+- **Dynamic Masonry Bento Layout**: A visually striking grid layout for the gallery and highlights section that elegantly stacks landscape, portrait, and square frames without gaps.
+- **Cinematic Text Reveal**: Fluid letter-reveal typography animations powered by **Framer Motion** to deliver a sleek visual landing.
+- **Responsive Sizing System**: Modern CSS `clamp()` typography and container sizing supporting displays from 320px mobile viewports up to 4K ultra-wide monitors.
+- **Image Copy Protection**: Disabled drag-and-drop actions, user selection properties, and context menus (`right-click`) to deter casual saving of original creative works.
+- **Smooth Custom Cursor**: Dynamic fluid mouse tracker that adapts to user interactions.
 
 ### 🛡️ Secure Admin Panel
-- **Session-Based Authentication**: Secure login mechanism requiring a personal administrative passcode, validated using server-side PBKDF2 hashing with unique random salts.
-- **Forgot & Reset Password Workflow**: Secure passcode reset flow including temporary tokens, validation checking, and automated on-screen reset links when SMTP services are unconfigured.
-- **Settings Console**: A settings workspace containing profile updates (name, title, location, general email, bio statement), and a Change Passcode form validating character complexity rules.
-- **Passcode Complexity Rules**: Enforces robust credential requirements:
-  - Minimum 8 characters.
-  - At least one uppercase letter.
-  - At least one lowercase letter.
-  - At least one numerical digit.
-  - At least one special character.
+- **Session-Based Authentication**: Secure admin login and token verification matching server-side cryptographically salted **PBKDF2** password hashes.
+- **Password Complexity Engine**: Validates password requirements strictly (minimum 8 characters, lowercase, uppercase, numerical digit, and special symbol).
+- **Comprehensive Settings Console**: Modify personal information, update email configurations, upload profile avatars, edit the visual subtitle sections, or alter passwords.
+- **Dynamic Categories (Subsections) Manager**: Create and organize custom photo subsections (e.g., Landscapes, Sunsets, Portraits, Streets) on the fly.
+- **Flexible Photo Content Control**: Upload, delete, change display order, toggle featured highlights status, modify location meta tags, and reconfigure grid spans (`sizeClass`) dynamically.
 
-### ⚡ Performance Refactoring & Storage
-- **Local Disk Storage**: Large smartphone and DSLR uploads (10MB–25MB) are stored as physical static files in the `/uploads/` directory on the server disk instead of inside SQLite Base64 database columns.
-- **API File Uploader**: An optimized `/api/upload` endpoint decodes binary buffers, structures file sizes, and returns asset paths, reducing API JSON response weight from hundreds of megabytes to a few kilobytes.
-- **Auto-Migration Pipeline**: Integrated `migrateBase64ToFiles()` database startup task automatically extracts existing Base64 strings from SQLite, moves them to local disk files, and updates database records on launch.
+### ⚡ Performance-Engineered Backend
+- **Hybrid Storage Pipeline**: Local disk storage keeps heavy DSLR and smartphone images (`10MB - 25MB+`) organized as physical static files in the `/uploads/` directory on the server, keeping SQLite lightweight and fast.
+- **Binary Stream Uploader & EXIF Parser**: Reads metadata (focal length, shutter speed, aperture, ISO) automatically from uploaded images. Natively converts high-quality iPhone `.heic` and `.heif` images to `.jpg` format.
+- **Database Auto-Migration**: Built-in startup task detects legacy Base64 image blobs stored inside SQLite, extracts them into static physical files on disk, and updates database references dynamically.
+- **Security & Rate-Limiting**: Configured with `helmet` for Vite-friendly Content Security Policies (CSP) and `express-rate-limit` to prevent denial-of-service and brute-force attempts on administrative routes.
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+graph TD
+    User([Visitor / Client]) -->|Views Portfolio| ReactApp[React Frontend - Vite + Tailwind]
+    Admin([Administrator]) -->|Authenticates & Manages Content| ReactApp
+    
+    ReactApp -->|Proxy requests /api| ExpressApp[Express Node.js Server]
+    
+    subgraph Express Backend
+        ExpressApp -->|Read/Write Metadata| SQLite[(SQLite Database)]
+        ExpressApp -->|Saves static photos| Uploads[Uploads Directory - Local Disk]
+        ExpressApp -->|Extracts EXIF / Converts HEIC| ImageProc[Image Processor]
+        ImageProc --> Uploads
+    end
+    
+    ReactApp -->|Direct contact notifications| Web3Forms[Web3Forms API]
+```
+
+---
+
+## 📂 Repository File Structure
+
+```
+├── .vite/                  # Vite cache directory
+├── dist/                   # Production build outputs (compiled static files)
+├── imgs/                   # Default static assets / profile images
+├── src/                    # Frontend React codebase
+│   ├── components/         # Reusable frontend layout components
+│   │   ├── AdminPanel.jsx           # Administrative control panel & settings
+│   │   ├── CinematicBackground.jsx  # Three.js WebGL smoke & particle canvas
+│   │   ├── CinematicTextReveal.jsx  # Framer Motion animated entry text
+│   │   ├── CustomCursor.jsx         # Interactive cursor tracking effect
+│   │   ├── Hero.jsx                 # Landing introduction section
+│   │   ├── LeafBackground.jsx       # SVG floating foliage details
+│   │   ├── Lightbox.jsx             # Overlay for high-res photo viewing
+│   │   ├── MistyMeshBackground.jsx  # Soft color-mesh background details
+│   │   ├── PhotoGrid.jsx            # Bento layout gallery with categorizations
+│   │   └── Watermark.jsx            # Custom watermark overlay on protected images
+│   ├── utils/
+│   │   └── imageProcessor.js        # Client side processing utilities
+│   ├── App.jsx             # Main routing, state manager, and synchronization
+│   ├── index.css           # Global CSS variables & Tailwind config imports
+│   └── main.jsx            # React root mount point
+├── uploads/                # Dynamic uploaded static images (local disk storage)
+├── vercel.json             # Vercel Serverless routing configurations
+├── server.js               # Express application server & API router
+├── seed.js                 # Initial SQLite sample data seeder
+├── vite.config.js          # Vite server and proxy configuration
+└── package.json            # NPM scripts & package dependencies
+```
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: React, Tailwind CSS, Vite, Framer Motion, Lucide React, Three.js (WebGL).
-- **Backend**: Node.js, Express, SQLite, Rate Limiters, Body Parsers.
+- **Frontend**: React 18, Tailwind CSS v4, Vite, Framer Motion, Lucide React, Three.js (WebGL).
+- **Backend**: Node.js, Express, SQLite, Rate Limiters, Body Parsers, Helmet.
 - **Libraries**: ExifReader, heic2any.
 
 ---
@@ -42,7 +94,7 @@ Odyssey is a premium, state-of-the-art photography portfolio and administrative 
 ## ⚙️ Project Setup
 
 ### 📦 Prerequisites
-Install [Node.js](https://nodejs.org/) (v16+ recommended).
+Install [Node.js](https://nodejs.org/) (v18+ recommended).
 
 ### 🔧 Installation
 1. Clone the repository and navigate to the project root.
