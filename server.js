@@ -88,6 +88,19 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '100mb' }));
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 
+// Middleware to ensure database is initialized before handling requests
+app.use(async (req, res, next) => {
+  try {
+    if (dbInitPromise) {
+      await dbInitPromise;
+    }
+    next();
+  } catch (err) {
+    console.error('[ERROR] Request aborted, database failed to initialize:', err);
+    res.status(500).json({ error: 'Database failed to initialize.' });
+  }
+});
+
 // Serve uploaded images from 'uploads' directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -103,6 +116,7 @@ app.use((req, res, next) => {
 });
 
 let db;
+let dbInitPromise;
 
 async function migrateBase64ToFiles(db) {
   const uploadsDir = path.join(__dirname, 'uploads');
@@ -734,18 +748,20 @@ app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// Initialize database connection using top-level await
-try {
-  await initDb();
+// Initialize database connection as a promise (avoids top-level await in global scope)
+dbInitPromise = initDb().then(() => {
   console.log(`[LOG] [${new Date().toISOString()}] Database initialized successfully.`);
-} catch (err) {
+}).catch(err => {
   console.error(`[CRITICAL ERROR] [${new Date().toISOString()}] Failed to start database:`, err);
-}
+  throw err;
+});
 
 // Only listen on port if not running in a serverless environment (Vercel)
 if (!process.env.VERCEL) {
-  app.listen(PORT, () => {
-    console.log(`[LOG] [${new Date().toISOString()}] Backend server listening on http://localhost:${PORT}`);
+  dbInitPromise.then(() => {
+    app.listen(PORT, () => {
+      console.log(`[LOG] [${new Date().toISOString()}] Backend server listening on http://localhost:${PORT}`);
+    });
   });
 }
 
