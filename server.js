@@ -385,7 +385,7 @@ app.post('/api/change-password', requireAuth, async (req, res) => {
   }
 
   // Enforce strong password complexity policy
-  const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
   if (!strongPasswordRegex.test(newPassword)) {
     return res.status(400).json({ 
       error: 'New password does not meet complexity requirements: Minimum 8 characters, at least one uppercase letter, one lowercase letter, one number, and one special character.' 
@@ -431,7 +431,8 @@ app.post('/api/forgot-password', async (req, res) => {
 
       return res.json({ 
         success: true, 
-        message: 'Email service is not configured. Since you are running in local/development mode, the password reset link has been printed to the server terminal console for testing!'
+        message: 'Email service is not configured. Since you are running in local/development mode, the password reset link is provided below:',
+        resetLink: resetLink
       });
     }
 
@@ -486,7 +487,7 @@ app.post('/api/reset-password', async (req, res) => {
   }
 
   // Enforce strong password complexity policy
-  const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
   if (!strongPasswordRegex.test(newPassword)) {
     return res.status(400).json({ 
       error: 'New password does not meet complexity requirements: Minimum 8 characters, at least one uppercase letter, one lowercase letter, one number, and one special character.' 

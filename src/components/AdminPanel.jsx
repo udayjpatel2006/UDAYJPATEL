@@ -124,6 +124,7 @@ export default function AdminPanel({
   const [resetToken, setResetToken] = useState('');
   const [forgotEmailSuccess, setForgotEmailSuccess] = useState('');
   const [forgotEmailError, setForgotEmailError] = useState('');
+  const [devResetLink, setDevResetLink] = useState('');
   const [resetPasswordForm, setResetPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
   const [resetPasswordSuccess, setResetPasswordSuccess] = useState('');
   const [resetPasswordError, setResetPasswordError] = useState('');
@@ -262,7 +263,7 @@ export default function AdminPanel({
       return;
     }
 
-    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
     if (!strongPasswordRegex.test(passwordForm.newPassword)) {
       setPasswordError('New password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.');
       return;
@@ -315,6 +316,9 @@ export default function AdminPanel({
       }
 
       setForgotEmailSuccess(data.message || 'Reset link sent successfully!');
+      if (data.resetLink) {
+        setDevResetLink(data.resetLink);
+      }
     } catch (err) {
       setForgotEmailError(err.message || 'Error processing forgot password request.');
     }
@@ -331,7 +335,7 @@ export default function AdminPanel({
       return;
     }
 
-    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
     if (!strongPasswordRegex.test(resetPasswordForm.newPassword)) {
       setResetPasswordError('Password must be at least 8 characters long and contain at least one uppercase, one lowercase, one number, and one special character.');
       return;
@@ -677,6 +681,7 @@ export default function AdminPanel({
                     type="button"
                     onClick={() => {
                       setLoginView('login');
+                      setDevResetLink('');
                       window.history.replaceState({}, '', '/admin');
                     }}
                     className="flex-1 bg-transparent hover:bg-white/5 border border-white/10 text-white py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors w-full text-center"
@@ -719,10 +724,20 @@ export default function AdminPanel({
                   <p className="text-xs text-rose-500 font-light text-center">{forgotEmailError}</p>
                 )}
                 {forgotEmailSuccess && (
-                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-3">
                     <p className="text-xs text-emerald-400 font-light text-center leading-relaxed">
                       {forgotEmailSuccess}
                     </p>
+                    {devResetLink && (
+                      <div className="text-center pt-2">
+                        <a
+                          href={devResetLink}
+                          className="inline-block bg-emerald-500 hover:bg-emerald-600 text-black px-4 py-2 rounded-lg text-xs font-bold transition-colors w-full text-center"
+                        >
+                          Go to Reset Password Form
+                        </a>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -735,7 +750,10 @@ export default function AdminPanel({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setLoginView('login')}
+                    onClick={() => {
+                      setLoginView('login');
+                      setDevResetLink('');
+                    }}
                     className="bg-transparent hover:bg-white/5 border border-white/10 text-white py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors w-full text-center"
                   >
                     Back to Login
@@ -778,6 +796,7 @@ export default function AdminPanel({
                         setLoginView('forgot');
                         setForgotEmailError('');
                         setForgotEmailSuccess('');
+                        setDevResetLink('');
                       }}
                       className="text-[10px] tracking-wider text-[#8c8c8c] hover:text-white uppercase transition-colors"
                     >
