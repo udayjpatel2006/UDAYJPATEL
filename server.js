@@ -15,6 +15,20 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Secure PBKDF2 Hashing Helpers
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(password, storedValue) {
+  if (!storedValue || !storedValue.includes(':')) return false;
+  const [salt, originalHash] = storedValue.split(':');
+  const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+  return hash === originalHash;
+}
+
 // Enforce HTTPS middleware in production
 app.use((req, res, next) => {
   if (req.headers['x-forwarded-proto'] && req.headers['x-forwarded-proto'] !== 'https') {
@@ -95,6 +109,22 @@ async function initDb() {
       value TEXT
     )
   `);
+
+  // Create admin_auth table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS admin_auth (
+      username TEXT PRIMARY KEY,
+      password_hash TEXT
+    )
+  `);
+
+  // Seed default admin password if empty
+  const adminCount = await db.get('SELECT COUNT(*) as count FROM admin_auth');
+  if (adminCount.count === 0) {
+    const defaultHash = hashPassword(process.env.ADMIN_PASSCODE || 'admin');
+    await db.run('INSERT INTO admin_auth (username, password_hash) VALUES (?, ?)', ['admin', defaultHash]);
+    console.log('[LOG] Default admin credentials seeded successfully into SQLite.');
+  }
 
   // Create photos table
   await db.exec(`
@@ -325,15 +355,152 @@ function requireAuth(req, res, next) {
 }
 
 // Admin login endpoint
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { passcode } = req.body;
-  if (passcode === ADMIN_PASSCODE) {
+  try {
+    const adminRecord = await db.get('SELECT password_hash FROM admin_auth WHERE username = ?', ['admin']);
+    if (adminRecord && verifyPassword(passcode, adminRecord.password_hash)) {
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiry = new Date(Date.now() + 2 * 60 * 60 * 1000);
+      activeSessions.set(token, expiry);
+      res.json({ success: true, token });
+    } else {
+      res.status(401).json({ error: 'Invalid passcode' });
+    }
+  } catch (err) {
+    console.error('[ERROR] Login handler database query failed:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Store password reset tokens in memory with an expiration time
+const resetTokens = new Map();
+
+// Change Password Endpoint (Requires Authentication)
+app.post('/api/change-password', requireAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Current password and new password are required.' });
+  }
+
+  // Enforce strong password complexity policy
+  const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  if (!strongPasswordRegex.test(newPassword)) {
+    return res.status(400).json({ 
+      error: 'New password does not meet complexity requirements: Minimum 8 characters, at least one uppercase letter, one lowercase letter, one number, and one special character.' 
+    });
+  }
+
+  try {
+    const adminRecord = await db.get('SELECT password_hash FROM admin_auth WHERE username = ?', ['admin']);
+    if (!adminRecord || !verifyPassword(currentPassword, adminRecord.password_hash)) {
+      return res.status(401).json({ error: 'Incorrect current password' });
+    }
+
+    const newHash = hashPassword(newPassword);
+    await db.run('UPDATE admin_auth SET password_hash = ? WHERE username = ?', [newHash, 'admin']);
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('[ERROR] Change password database update failed:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Forgot Password Endpoint (Sends reset link / Developer console fallback)
+app.post('/api/forgot-password', async (req, res) => {
+  try {
+    const profileEmailRow = await db.get("SELECT value FROM profile_settings WHERE key = 'email'");
+    const adminEmail = profileEmailRow ? profileEmailRow.value : null;
+
+    const { SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_PORT } = process.env;
+    const isEmailEnabled = !!(SMTP_HOST && SMTP_USER && SMTP_PASS && adminEmail);
+
     const token = crypto.randomBytes(32).toString('hex');
-    const expiry = new Date(Date.now() + 2 * 60 * 60 * 1000);
-    activeSessions.set(token, expiry);
-    res.json({ success: true, token });
-  } else {
-    res.status(401).json({ error: 'Invalid passcode' });
+    const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes validity
+    resetTokens.set(token, { expiry, username: 'admin' });
+
+    const origin = req.headers.origin || 'http://localhost:3000';
+    const resetLink = `${origin}/admin?resetToken=${token}`;
+
+    if (!isEmailEnabled) {
+      // Developer testing fallback: log to console and inform client
+      console.log(`\n==================================================`);
+      console.log(`[DEV ONLY] [PASSWORD RESET LINK]: ${resetLink}`);
+      console.log(`==================================================\n`);
+
+      return res.json({ 
+        success: true, 
+        message: 'Email service is not configured. Since you are running in local/development mode, the password reset link has been printed to the server terminal console for testing!'
+      });
+    }
+
+    const nodemailer = (await import('nodemailer')).default;
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: parseInt(SMTP_PORT || '587', 10),
+      secure: parseInt(SMTP_PORT || '587', 10) === 465,
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS
+      }
+    });
+
+    await transporter.sendMail({
+      from: SMTP_USER,
+      to: adminEmail,
+      subject: 'Password Reset Request - Portfolio Admin',
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+          <h2 style="font-weight: 600; color: #111;">Password Reset Request</h2>
+          <p>You requested a password reset for your photography portfolio admin account.</p>
+          <p>Please click the button below to reset your password. This link is valid for 15 minutes.</p>
+          <div style="margin: 30px 0; text-align: center;">
+            <a href="${resetLink}" style="background-color: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reset Password</a>
+          </div>
+          <p>If you did not request this, you can safely ignore this email.</p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="font-size: 11px; color: #888;">Portfolio Admin Service</p>
+        </div>
+      `
+    });
+
+    res.json({ success: true, message: 'Password reset link sent to your registered email address.' });
+  } catch (err) {
+    console.error('[ERROR] Forgot password handler failed:', err);
+    res.status(500).json({ error: 'Failed to process password reset request.' });
+  }
+});
+
+// Reset Password Endpoint
+app.post('/api/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: 'Reset token and new password are required.' });
+  }
+
+  const tokenData = resetTokens.get(token);
+  if (!tokenData || new Date() > tokenData.expiry) {
+    if (tokenData) resetTokens.delete(token);
+    return res.status(400).json({ error: 'Invalid or expired password reset token.' });
+  }
+
+  // Enforce strong password complexity policy
+  const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  if (!strongPasswordRegex.test(newPassword)) {
+    return res.status(400).json({ 
+      error: 'New password does not meet complexity requirements: Minimum 8 characters, at least one uppercase letter, one lowercase letter, one number, and one special character.' 
+    });
+  }
+
+  try {
+    const newHash = hashPassword(newPassword);
+    await db.run('UPDATE admin_auth SET password_hash = ? WHERE username = ?', [newHash, tokenData.username]);
+    resetTokens.delete(token);
+    res.json({ success: true, message: 'Password reset successfully.' });
+  } catch (err) {
+    console.error('[ERROR] Reset password database update failed:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

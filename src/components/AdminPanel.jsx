@@ -119,6 +119,29 @@ export default function AdminPanel({
   const [isUploading, setIsUploading] = useState(false);
   const [filterCategory, setFilterCategory] = useState('All');
 
+  // Password reset and management states
+  const [loginView, setLoginView] = useState('login'); // 'login' | 'forgot' | 'reset'
+  const [resetToken, setResetToken] = useState('');
+  const [forgotEmailSuccess, setForgotEmailSuccess] = useState('');
+  const [forgotEmailError, setForgotEmailError] = useState('');
+  const [resetPasswordForm, setResetPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
+  const [resetPasswordSuccess, setResetPasswordSuccess] = useState('');
+  const [resetPasswordError, setResetPasswordError] = useState('');
+
+  // Change password states
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('resetToken');
+    if (token) {
+      setResetToken(token);
+      setLoginView('reset');
+    }
+  }, []);
+
   // Local state for profile inputs
   const [profileForm, setProfileForm] = useState({
     name: '',
@@ -226,6 +249,118 @@ export default function AdminPanel({
     e.preventDefault();
     onUpdateProfile(profileForm);
     triggerSuccess('Profile information updated successfully!');
+  };
+
+  // Handle Admin Password Change
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('New passwords do not match.');
+      return;
+    }
+
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!strongPasswordRegex.test(passwordForm.newPassword)) {
+      setPasswordError('New password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to update password');
+      }
+
+      setPasswordSuccess('Password updated successfully!');
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (err) {
+      setPasswordError(err.message || 'Error updating password.');
+    }
+  };
+
+  // Handle Forgot Password Form Submission
+  const handleForgotPasswordSubmit = async (e) => {
+    e.preventDefault();
+    setForgotEmailError('');
+    setForgotEmailSuccess('');
+
+    try {
+      const res = await fetch('/api/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to send reset link');
+      }
+
+      setForgotEmailSuccess(data.message || 'Reset link sent successfully!');
+    } catch (err) {
+      setForgotEmailError(err.message || 'Error processing forgot password request.');
+    }
+  };
+
+  // Handle Reset Password Form Submission
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    setResetPasswordError('');
+    setResetPasswordSuccess('');
+
+    if (resetPasswordForm.newPassword !== resetPasswordForm.confirmPassword) {
+      setResetPasswordError('Passwords do not match.');
+      return;
+    }
+
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!strongPasswordRegex.test(resetPasswordForm.newPassword)) {
+      setResetPasswordError('Password must be at least 8 characters long and contain at least one uppercase, one lowercase, one number, and one special character.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: resetToken,
+          newPassword: resetPasswordForm.newPassword
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to reset password');
+      }
+
+      setResetPasswordSuccess('Password reset successfully! Redirecting to login...');
+      setTimeout(() => {
+        setLoginView('login');
+        setResetPasswordForm({ newPassword: '', confirmPassword: '' });
+        window.history.replaceState({}, '', '/admin');
+      }, 2000);
+    } catch (err) {
+      setResetPasswordError(err.message || 'Failed to reset password.');
+    }
   };
 
   // Convert and handle direct local image uploads as Base64 strings with compression and EXIF metadata extraction
@@ -475,54 +610,203 @@ export default function AdminPanel({
       )}
       <AnimatePresence>
         {!isLoggedIn ? (
-          /* Login Dialog */
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -30 }}
-            className="w-full max-w-md bg-neutral-950 border border-white/10 rounded-3xl p-8 shadow-2xl relative mx-4 md:mx-0"
-          >
-            {/* Close Button */}
-            <button 
-              onClick={onClose}
-              className="absolute top-6 right-6 text-[#8c8c8c] hover:text-white transition-colors duration-300"
+          loginView === 'reset' ? (
+            /* Reset Password Dialog */
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -30 }}
+              className="w-full max-w-md bg-neutral-950 border border-white/10 rounded-3xl p-8 shadow-2xl relative mx-4 md:mx-0"
+              key="reset-view"
             >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex flex-col items-center mb-8">
-              <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 mb-4">
-                <Lock className="w-5 h-5" />
-              </div>
-              <h2 className="font-display text-2xl font-bold tracking-tight text-white uppercase">Admin Login</h2>
-              <p className="text-xs text-[#8c8c8c] mt-1 text-center">Authentication required to customize portfolio</p>
-            </div>
-
-            <form onSubmit={handleLogin} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold block">Passcode</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Enter admin passcode"
-                  value={passcode}
-                  onChange={(e) => setPasscode(e.target.value)}
-                  className="w-full bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-white focus:outline-none tracking-wide text-white transition-colors"
-                />
-              </div>
-
-              {errorMsg && (
-                <p className="text-xs font-semibold text-rose-500 tracking-wide text-center">{errorMsg}</p>
-              )}
-
-              <button
-                type="submit"
-                className="w-full bg-white text-black py-4 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-neutral-200 transition-colors"
+              <button 
+                onClick={onClose}
+                className="absolute top-6 right-6 text-[#8c8c8c] hover:text-white transition-colors duration-300"
               >
-                Access Panel
+                <X className="w-5 h-5" />
               </button>
-            </form>
-          </motion.div>
+
+              <div className="flex flex-col items-center mb-8">
+                <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 mb-4">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <h2 className="font-display text-2xl font-bold tracking-tight text-white uppercase">Reset Password</h2>
+                <p className="text-xs text-[#8c8c8c] mt-1 text-center font-light">Set a strong new passcode for your account</p>
+              </div>
+
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold block">New Password</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Enter new password"
+                    value={resetPasswordForm.newPassword}
+                    onChange={(e) => setResetPasswordForm({ ...resetPasswordForm, newPassword: e.target.value })}
+                    className="w-full bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-white focus:outline-none tracking-wide text-white transition-colors"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold block">Confirm New Password</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Confirm new password"
+                    value={resetPasswordForm.confirmPassword}
+                    onChange={(e) => setResetPasswordForm({ ...resetPasswordForm, confirmPassword: e.target.value })}
+                    className="w-full bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-white focus:outline-none tracking-wide text-white transition-colors"
+                  />
+                </div>
+
+                {resetPasswordError && (
+                  <p className="text-xs text-rose-500 font-light text-center">{resetPasswordError}</p>
+                )}
+                {resetPasswordSuccess && (
+                  <p className="text-xs text-emerald-500 font-light text-center">{resetPasswordSuccess}</p>
+                )}
+
+                <div className="flex gap-4">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-white hover:bg-neutral-200 text-black py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors w-full text-center"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginView('login');
+                      window.history.replaceState({}, '', '/admin');
+                    }}
+                    className="flex-1 bg-transparent hover:bg-white/5 border border-white/10 text-white py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors w-full text-center"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          ) : loginView === 'forgot' ? (
+            /* Forgot Password Dialog */
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -30 }}
+              className="w-full max-w-md bg-neutral-950 border border-white/10 rounded-3xl p-8 shadow-2xl relative mx-4 md:mx-0"
+              key="forgot-view"
+            >
+              <button 
+                onClick={onClose}
+                className="absolute top-6 right-6 text-[#8c8c8c] hover:text-white transition-colors duration-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex flex-col items-center mb-8">
+                <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 mb-4">
+                  <Image className="w-5 h-5" />
+                </div>
+                <h2 className="font-display text-2xl font-bold tracking-tight text-white uppercase">Forgot Password</h2>
+                <p className="text-xs text-[#8c8c8c] mt-1 text-center font-light">Send a password reset link to your registered email</p>
+              </div>
+
+              <form onSubmit={handleForgotPasswordSubmit} className="space-y-6">
+                <p className="text-xs text-[#8c8c8c] leading-relaxed text-center font-light">
+                  For security, we will send a password reset link to the registered administrator email address associated with this portfolio.
+                </p>
+
+                {forgotEmailError && (
+                  <p className="text-xs text-rose-500 font-light text-center">{forgotEmailError}</p>
+                )}
+                {forgotEmailSuccess && (
+                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                    <p className="text-xs text-emerald-400 font-light text-center leading-relaxed">
+                      {forgotEmailSuccess}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-3">
+                  <button
+                    type="submit"
+                    className="bg-white hover:bg-neutral-200 text-black py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors w-full text-center"
+                  >
+                    Send Reset Link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLoginView('login')}
+                    className="bg-transparent hover:bg-white/5 border border-white/10 text-white py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors w-full text-center"
+                  >
+                    Back to Login
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          ) : (
+            /* Login Dialog */
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -30 }}
+              className="w-full max-w-md bg-neutral-950 border border-white/10 rounded-3xl p-8 shadow-2xl relative mx-4 md:mx-0"
+              key="login-view"
+            >
+              {/* Close Button */}
+              <button 
+                onClick={onClose}
+                className="absolute top-6 right-6 text-[#8c8c8c] hover:text-white transition-colors duration-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex flex-col items-center mb-8">
+                <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70 mb-4">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <h2 className="font-display text-2xl font-bold tracking-tight text-white uppercase">Admin Login</h2>
+                <p className="text-xs text-[#8c8c8c] mt-1 text-center">Authentication required to customize portfolio</p>
+              </div>
+
+              <form onSubmit={handleLogin} className="space-y-6">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold block">Passcode</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoginView('forgot');
+                        setForgotEmailError('');
+                        setForgotEmailSuccess('');
+                      }}
+                      className="text-[10px] tracking-wider text-[#8c8c8c] hover:text-white uppercase transition-colors"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Enter admin passcode"
+                    value={passcode}
+                    onChange={(e) => setPasscode(e.target.value)}
+                    className="w-full bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-white focus:outline-none tracking-wide text-white transition-colors"
+                  />
+                </div>
+
+                {errorMsg && (
+                  <p className="text-xs font-semibold text-rose-500 tracking-wide text-center">{errorMsg}</p>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full bg-white text-black py-4 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-neutral-200 transition-colors"
+                >
+                  Access Panel
+                </button>
+              </form>
+            </motion.div>
+          )
         ) : (
           /* Admin Main Portal */
           <motion.div
@@ -1393,6 +1677,61 @@ export default function AdminPanel({
                           className="bg-white text-black px-6 py-2.5 rounded-full font-bold uppercase tracking-widest text-[10px] hover:bg-neutral-200 transition-colors"
                         >
                           Save Email Key
+                        </button>
+                      </form>
+                    </div>
+
+                    <div className="border-t border-white/5 pt-8">
+                      <h3 className="font-display text-xl font-bold uppercase tracking-wide text-white mb-2">Change Password</h3>
+                      <p className="text-xs text-[#8c8c8c] leading-relaxed max-w-xl font-light mb-4">
+                        Update your administrator passcode. Strong passwords require at least 8 characters, an uppercase letter, a lowercase letter, a number, and a special character.
+                      </p>
+                      
+                      <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
+                        <div className="space-y-2">
+                          <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold block">Current Password</label>
+                          <input
+                            type="password"
+                            required
+                            placeholder="Enter current password"
+                            value={passwordForm.currentPassword}
+                            onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-white focus:outline-none tracking-wide text-white transition-colors"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold block">New Password</label>
+                          <input
+                            type="password"
+                            required
+                            placeholder="Enter new password"
+                            value={passwordForm.newPassword}
+                            onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-white focus:outline-none tracking-wide text-white transition-colors"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold block">Confirm New Password</label>
+                          <input
+                            type="password"
+                            required
+                            placeholder="Confirm new password"
+                            value={passwordForm.confirmPassword}
+                            onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                            className="w-full bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-white focus:outline-none tracking-wide text-white transition-colors"
+                          />
+                        </div>
+                        {passwordError && (
+                          <p className="text-xs text-rose-500 font-light">{passwordError}</p>
+                        )}
+                        {passwordSuccess && (
+                          <p className="text-xs text-emerald-500 font-light">{passwordSuccess}</p>
+                        )}
+                        <button
+                          type="submit"
+                          className="bg-white text-black px-6 py-2.5 rounded-full font-bold uppercase tracking-widest text-[10px] hover:bg-neutral-200 transition-colors"
+                        >
+                          Update Password
                         </button>
                       </form>
                     </div>
