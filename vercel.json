@@ -16,18 +16,6 @@
   ],
   "routes": [
     {
-      "src": "/(uploads/.*)",
-      "dest": "$1"
-    },
-    {
-      "src": "/(assets/.*)",
-      "dest": "dist/$1"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "server.js"
-    },
-    {
       "src": "/(.*)",
       "dest": "server.js"
     }
