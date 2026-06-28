@@ -176,7 +176,7 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
             </h3>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="columns-1 sm:columns-2 md:columns-3 gap-6">
             {highlights.map((photo) => (
               <motion.div
                 key={`highlight-${photo.id}`}
@@ -185,7 +185,7 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-100px" }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
-                className={`relative overflow-hidden rounded-2xl border border-white/10 group cursor-pointer w-full h-auto ${getCardAspectRatioClass(photo.sizeClass)}`}
+                className={`relative overflow-hidden rounded-2xl border border-white/10 group cursor-pointer break-inside-avoid mb-6 inline-block w-full ${getCardClasses(photo.sizeClass)}`}
                 data-cursor="view"
                 data-cursor-text="OPEN"
               >
