@@ -109,16 +109,45 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
   }, []);
 
   const highlights = useMemo(() => {
-    return photoList.filter(photo => photo.isHighlight == 1);
+    return photoList
+      .filter(photo => photo.isHighlight > 0)
+      .sort((a, b) => a.isHighlight - b.isHighlight);
   }, [photoList]);
 
   const categories = useMemo(() => {
     return ["All", ...subsections];
   }, [subsections]);
 
-  const filteredPhotos = activeCategory === "All"
-    ? photoList
-    : photoList.filter(photo => photo.category === activeCategory);
+  const filteredPhotos = useMemo(() => {
+    if (activeCategory === "All") {
+      return photoList;
+    }
+    return photoList
+      .filter(photo => photo.category === activeCategory)
+      .sort((a, b) => {
+        const posA = a.position || 999;
+        const posB = b.position || 999;
+        if (posA !== posB) return posA - posB;
+        return a.id - b.id;
+      });
+  }, [photoList, activeCategory]);
+
+  const getCardAspectRatioClass = (sizeClass = '') => {
+    if (sizeClass.includes('aspect-')) {
+      const match = sizeClass.match(/aspect-\[[^\]]+\]/);
+      return match ? match[0] : 'aspect-square';
+    }
+    if (sizeClass.includes('col-span-2') && sizeClass.includes('row-span-2')) {
+      return 'aspect-square';
+    }
+    if (sizeClass.includes('col-span-2')) {
+      return 'aspect-[2/1]';
+    }
+    if (sizeClass.includes('row-span-2')) {
+      return 'aspect-[3/4]';
+    }
+    return 'aspect-square';
+  };
 
   const getCardClasses = (sizeClass = '') => {
     if (sizeClass.includes('aspect-')) {
@@ -156,7 +185,7 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-100px" }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
-                className="relative overflow-hidden rounded-2xl border border-white/10 group cursor-pointer aspect-[16/10] w-full h-auto"
+                className={`relative overflow-hidden rounded-2xl border border-white/10 group cursor-pointer w-full h-auto ${getCardAspectRatioClass(photo.sizeClass)}`}
                 data-cursor="view"
                 data-cursor-text="OPEN"
               >
@@ -217,14 +246,29 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
             {profileData.gallerySubtitle || "Curated collection of frames"}
           </motion.p>
         </div>
-        
         {/* Filters */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-nowrap overflow-x-auto scrollbar-none gap-2 pb-2 max-w-full md:max-w-[460px]">
           {categories.map(category => (
             <button
               key={category}
-              onClick={() => setActiveCategory(category)}
-              className={`relative px-4 py-2 text-xs font-semibold uppercase tracking-widest transition-colors duration-300 rounded-full ${
+              onClick={(e) => {
+                setActiveCategory(category);
+                const btn = e.currentTarget;
+                const container = btn.parentElement;
+                if (container) {
+                  const btnRect = btn.getBoundingClientRect();
+                  const containerRect = container.getBoundingClientRect();
+                  const relativeLeft = btnRect.left - containerRect.left + container.scrollLeft;
+                  const btnWidth = btnRect.width;
+                  const containerWidth = containerRect.width;
+                  const targetScrollLeft = relativeLeft - (containerWidth / 2) + (btnWidth / 2);
+                  container.scrollTo({
+                    left: targetScrollLeft,
+                    behavior: 'smooth'
+                  });
+                }
+              }}
+              className={`relative px-4 py-2 text-xs font-semibold uppercase tracking-widest transition-colors duration-300 rounded-full flex-shrink-0 ${
                 activeCategory === category ? 'text-black' : 'text-[#8c8c8c] hover:text-white'
               }`}
               data-cursor="pointer"
@@ -244,8 +288,7 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
 
       {/* Bento Grid */}
       <motion.div 
-        layout={!isMobile ? "position" : false}
-        className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-auto"
+        className="columns-1 sm:columns-2 md:columns-3 gap-6"
       >
         <AnimatePresence mode="popLayout">
           {filteredPhotos.map((photo) => (
@@ -258,7 +301,7 @@ export default function PhotoGrid({ onPhotoClick, photoList = PHOTO_DATA, profil
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
               style={{ willChange: 'transform, opacity' }}
-              className={`relative overflow-hidden rounded-2xl border border-white/10 group cursor-pointer ${getCardClasses(photo.sizeClass)}`}
+              className={`relative overflow-hidden rounded-2xl border border-white/10 group cursor-pointer break-inside-avoid mb-6 inline-block w-full ${getCardClasses(photo.sizeClass)}`}
               data-cursor="view"
               data-cursor-text="OPEN"
             >

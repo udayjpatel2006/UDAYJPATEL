@@ -93,7 +93,7 @@ export default function Lightbox({ photo, onClose, onPrev, onNext, artistName = 
           className="relative w-full overflow-y-auto md:overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 flex flex-col md:flex-row shadow-2xl max-h-[85vh] md:max-h-none"
         >
           {/* Left Side: Photo Frame with watermark and overlay protection */}
-          <div className="relative flex-1 bg-black flex items-center justify-center h-[35vh] md:h-[65vh] overflow-hidden select-none">
+          <div className="relative flex-1 bg-neutral-950 flex items-center justify-center h-[35vh] md:h-[65vh] overflow-hidden select-none">
             <div className="relative inline-block max-h-full max-w-full">
               <img
                 src={photo.url}

@@ -106,7 +106,8 @@ async function initDb() {
       url TEXT,
       sizeClass TEXT,
       settings TEXT,
-      isHighlight INTEGER DEFAULT 0
+      isHighlight INTEGER DEFAULT 0,
+      position INTEGER DEFAULT 0
     )
   `);
 
@@ -117,6 +118,16 @@ async function initDb() {
   } catch (err) {
     if (!err.message.includes('duplicate column name') && !err.message.includes('already exists')) {
       console.error('[ERROR] Failed to run migration for photos table (isHighlight):', err);
+    }
+  }
+
+  // Migrate existing databases to add position if it doesn't exist
+  try {
+    await db.exec(`ALTER TABLE photos ADD COLUMN position INTEGER DEFAULT 0`);
+    console.log('[LOG] Migration: Added position column to photos table');
+  } catch (err) {
+    if (!err.message.includes('duplicate column name') && !err.message.includes('already exists')) {
+      console.error('[ERROR] Failed to run migration for photos table (position):', err);
     }
   }
 
@@ -267,9 +278,9 @@ async function initDb() {
       }
     ];
 
-    const stmt = await db.prepare('INSERT INTO photos (id, title, category, location, url, sizeClass, settings, isHighlight) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+    const stmt = await db.prepare('INSERT INTO photos (id, title, category, location, url, sizeClass, settings, isHighlight, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
     for (const photo of defaultPhotos) {
-      await stmt.run(photo.id, photo.title, photo.category, photo.location, photo.url, photo.sizeClass, photo.settings, photo.isHighlight);
+      await stmt.run(photo.id, photo.title, photo.category, photo.location, photo.url, photo.sizeClass, photo.settings, photo.isHighlight, photo.position || 0);
     }
     await stmt.finalize();
   }
@@ -376,9 +387,9 @@ app.post('/api/photos', requireAuth, async (req, res) => {
     try {
       await db.run('DELETE FROM photos');
       
-      const stmt = await db.prepare('INSERT INTO photos (id, title, category, location, url, sizeClass, settings, isHighlight) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+      const stmt = await db.prepare('INSERT INTO photos (id, title, category, location, url, sizeClass, settings, isHighlight, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
       for (const p of photos) {
-        await stmt.run(p.id, p.title, p.category, p.location, p.url, p.sizeClass, p.settings, p.isHighlight || 0);
+        await stmt.run(p.id, p.title, p.category, p.location, p.url, p.sizeClass, p.settings, p.isHighlight || 0, p.position || 0);
       }
       await stmt.finalize();
       await db.exec('COMMIT');

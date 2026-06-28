@@ -31,9 +31,18 @@ const DEFAULT_PROFILE = {
 };
 
 export default function App() {
-  const [profileData, setProfileData] = useState(DEFAULT_PROFILE);
-  const [photoList, setPhotoList] = useState(PHOTO_DATA);
-  const [subsections, setSubsections] = useState(["Landscapes", "Sunsets", "Portraits", "Streets"]);
+  const [profileData, setProfileData] = useState(() => {
+    const cached = localStorage.getItem('uday_profile_data');
+    return cached ? JSON.parse(cached) : DEFAULT_PROFILE;
+  });
+  const [photoList, setPhotoList] = useState(() => {
+    const cached = localStorage.getItem('uday_photo_list');
+    return cached ? JSON.parse(cached) : PHOTO_DATA;
+  });
+  const [subsections, setSubsections] = useState(() => {
+    const cached = localStorage.getItem('uday_subsections');
+    return cached ? JSON.parse(cached) : ["Landscapes", "Sunsets", "Portraits", "Streets"];
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [authToken, setAuthToken] = useState(() => sessionStorage.getItem('admin_token') || '');
 
@@ -104,6 +113,7 @@ export default function App() {
 
   useEffect(() => {
     const loadData = async () => {
+      const startTime = Date.now();
       try {
         console.log('[LOG] Loading portfolio configurations from database...');
         // Append a timestamp parameter to prevent API caching (Requirement 6)
@@ -131,11 +141,11 @@ export default function App() {
             const parsed = JSON.parse(localProfile);
             activeProfile = parsed;
             needsMigrationSync = true;
-            await fetch('/api/profile', {
+            fetch('/api/profile', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: localProfile
-            });
+            }).catch(e => console.error('[ERROR] Background profile migration failed:', e));
           } catch (e) {
             console.error('[ERROR] Failed to migrate profile from localStorage:', e);
           }
@@ -147,11 +157,11 @@ export default function App() {
             const parsed = JSON.parse(localPhotos);
             activePhotos = parsed;
             needsMigrationSync = true;
-            await fetch('/api/photos', {
+            fetch('/api/photos', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: localPhotos
-            });
+            }).catch(e => console.error('[ERROR] Background photos migration failed:', e));
           } catch (e) {
             console.error('[ERROR] Failed to migrate photos from localStorage:', e);
           }
@@ -163,11 +173,11 @@ export default function App() {
             const parsed = JSON.parse(localSubsections);
             activeSubsections = parsed;
             needsMigrationSync = true;
-            await fetch('/api/subsections', {
+            fetch('/api/subsections', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: localSubsections
-            });
+            }).catch(e => console.error('[ERROR] Background subsections migration failed:', e));
           } catch (e) {
             console.error('[ERROR] Failed to migrate subsections from localStorage:', e);
           }
@@ -193,7 +203,11 @@ export default function App() {
         if (localPhotos) setPhotoList(JSON.parse(localPhotos));
         if (localSubsections) setSubsections(JSON.parse(localSubsections));
       } finally {
-        setIsLoading(false);
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, 800 - elapsed);
+        setTimeout(() => {
+          setIsLoading(false);
+        }, remaining);
       }
     };
 
@@ -389,19 +403,24 @@ export default function App() {
     setSelectedPhoto(photoList[nextIndex]);
   };
 
-  if (isLoading) {
-    return (
-      <div className="fixed inset-0 w-full h-full bg-neutral-950 flex flex-col items-center justify-center z-50 text-white font-display">
-        <div className="space-y-4 text-center">
-          <span className="inline-block w-6 h-6 border-2 border-t-transparent border-white rounded-full animate-spin" />
-          <p className="text-xs tracking-[0.3em] text-[#8c8c8c] uppercase font-semibold">Loading Portfolio...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="relative min-h-screen bg-transparent text-white">
+      {/* Premium Loader transition overlay */}
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
+            className="fixed inset-0 w-full h-full bg-neutral-950 flex flex-col items-center justify-center z-50 text-white font-display"
+          >
+            <div className="space-y-4 text-center">
+              <span className="inline-block w-6 h-6 border-2 border-t-transparent border-white rounded-full animate-spin" />
+              <p className="text-xs tracking-[0.3em] text-[#8c8c8c] uppercase font-semibold">Loading Portfolio...</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Custom Cursor */}
       <CustomCursor />
 

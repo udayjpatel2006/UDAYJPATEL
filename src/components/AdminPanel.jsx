@@ -3,6 +3,101 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trash2, Edit3, Plus, RotateCcw, Download, Upload, Lock, Unlock, Check, Image } from 'lucide-react';
 import ExifReader from 'exifreader';
 
+const TablePositionInput = ({ photo, photoList, onUpdatePhotos }) => {
+  const [val, setVal] = useState(photo.position !== undefined && photo.position !== null ? photo.position : '');
+  
+  useEffect(() => {
+    setVal(photo.position !== undefined && photo.position !== null ? photo.position : '');
+  }, [photo.position]);
+
+  const handleSave = () => {
+    const parsed = parseInt(val, 10);
+    const newPos = isNaN(parsed) ? 0 : parsed;
+    if (newPos !== photo.position) {
+      const updated = photoList.map(p => 
+        String(p.id) === String(photo.id) ? { ...p, position: newPos } : p
+      );
+      onUpdatePhotos(updated);
+    }
+  };
+
+  return (
+    <input
+      type="number"
+      min={0}
+      max={999}
+      value={val}
+      placeholder="-"
+      onChange={(e) => setVal(e.target.value)}
+      onBlur={handleSave}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          handleSave();
+          e.target.blur();
+        }
+      }}
+      className="w-16 bg-neutral-900 border border-white/10 rounded px-2 py-1 text-xs text-center text-white focus:outline-none focus:border-white font-mono"
+    />
+  );
+};
+
+const TableHighlightInput = ({ photo, photoList, onUpdatePhotos }) => {
+  const isHighlightActive = photo.isHighlight > 0;
+  const [val, setVal] = useState(photo.isHighlight || '');
+
+  useEffect(() => {
+    setVal(photo.isHighlight || '');
+  }, [photo.isHighlight]);
+
+  const handleSave = (newVal) => {
+    const parsed = parseInt(newVal, 10);
+    const newHighlight = isNaN(parsed) ? 0 : parsed;
+    if (newHighlight !== photo.isHighlight) {
+      const updated = photoList.map(p => 
+        String(p.id) === String(photo.id) ? { ...p, isHighlight: newHighlight } : p
+      );
+      onUpdatePhotos(updated);
+    }
+  };
+
+  const handleToggle = (checked) => {
+    const newHighlight = checked ? 1 : 0;
+    setVal(newHighlight || '');
+    const updated = photoList.map(p => 
+      String(p.id) === String(photo.id) ? { ...p, isHighlight: newHighlight } : p
+    );
+    onUpdatePhotos(updated);
+  };
+
+  return (
+    <div className="flex items-center gap-2 justify-center">
+      <input
+        type="checkbox"
+        checked={isHighlightActive}
+        onChange={(e) => handleToggle(e.target.checked)}
+        className="w-3.5 h-3.5 bg-neutral-950 border-white/10 rounded text-white cursor-pointer"
+      />
+      {isHighlightActive && (
+        <input
+          type="number"
+          min={1}
+          max={50}
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={() => handleSave(val)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleSave(val);
+              e.target.blur();
+            }
+          }}
+          className="w-12 bg-neutral-900 border border-white/10 rounded px-1.5 py-0.5 text-[10px] text-center text-white focus:outline-none focus:border-white font-mono"
+        />
+      )}
+    </div>
+  );
+};
+
 export default function AdminPanel({
   profileData,
   onUpdateProfile,
@@ -21,6 +116,7 @@ export default function AdminPanel({
   const [errorMsg, setErrorMsg] = useState('');
   const [activeTab, setActiveTab] = useState('profile');
   const [successMsg, setSuccessMsg] = useState('');
+  const [filterCategory, setFilterCategory] = useState('All');
 
   // Local state for profile inputs
   const [profileForm, setProfileForm] = useState({
@@ -55,7 +151,8 @@ export default function AdminPanel({
     url: '',
     sizeClass: 'md:col-span-1 md:row-span-1',
     settings: '50mm • f/2.0 • 1/500s • ISO 100',
-    isHighlight: 0
+    isHighlight: 0,
+    position: 0
   });
 
   // Local state for subsections management
@@ -140,10 +237,14 @@ export default function AdminPanel({
       }
 
       let extractedSettings = null;
-      if (targetForm === 'photo') {
-        try {
-          const tags = await ExifReader.load(file);
-          
+      let orientation = 1;
+      try {
+        const tags = await ExifReader.load(file);
+        if (tags && tags.Orientation) {
+          orientation = parseInt(tags.Orientation.value || tags.Orientation.description, 10) || 1;
+        }
+
+        if (targetForm === 'photo') {
           let focalLength = '';
           if (tags.FocalLength) {
             focalLength = String(tags.FocalLength.description).replace(/\s+/g, '');
@@ -173,9 +274,9 @@ export default function AdminPanel({
           if (parts.length > 0) {
             extractedSettings = parts.join(' • ');
           }
-        } catch (error) {
-          console.warn('Failed to parse EXIF metadata:', error);
         }
+      } catch (error) {
+        console.warn('Failed to parse EXIF metadata:', error);
       }
 
       const reader = new FileReader();
@@ -200,9 +301,27 @@ export default function AdminPanel({
             }
           }
 
-          canvas.width = width;
-          canvas.height = height;
+          if (orientation === 6 || orientation === 8) {
+            canvas.width = height;
+            canvas.height = width;
+          } else {
+            canvas.width = width;
+            canvas.height = height;
+          }
+
           const ctx = canvas.getContext('2d');
+          
+          if (orientation === 3) {
+            ctx.translate(width, height);
+            ctx.rotate(Math.PI);
+          } else if (orientation === 6) {
+            ctx.translate(height, 0);
+            ctx.rotate(Math.PI / 2);
+          } else if (orientation === 8) {
+            ctx.translate(0, width);
+            ctx.rotate(-Math.PI / 2);
+          }
+
           ctx.drawImage(img, 0, 0, width, height);
 
           // Compress to JPEG with 0.75 quality
@@ -245,7 +364,8 @@ export default function AdminPanel({
       url: photo.url || '',
       sizeClass: photo.sizeClass || 'md:col-span-1 md:row-span-1',
       settings: photo.settings || '50mm • f/2.0 • 1/500s • ISO 100',
-      isHighlight: photo.isHighlight || 0
+      isHighlight: photo.isHighlight || 0,
+      position: photo.position || 0
     });
   };
 
@@ -260,7 +380,8 @@ export default function AdminPanel({
       url: '',
       sizeClass: 'md:col-span-1 md:row-span-1',
       settings: '50mm • f/2.0 • 1/500s • ISO 100',
-      isHighlight: 0
+      isHighlight: 0,
+      position: 0
     });
   };
 
@@ -1054,14 +1175,67 @@ export default function AdminPanel({
                                       />
                                     </div>
                                   </div>
+
+                                  {/* Nested photo list for category position ordering */}
+                                  <div className="border-t border-white/5 pt-3 mt-2">
+                                    <div className="flex justify-between items-center mb-2">
+                                      <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest">Subsection Order</span>
+                                    </div>
+                                    {photoList.filter(p => p.category === sub).length === 0 ? (
+                                      <p className="text-[10px] text-neutral-600 italic">No photos in this subsection yet.</p>
+                                    ) : (
+                                      <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin">
+                                        {photoList
+                                          .filter(p => p.category === sub)
+                                          .sort((a, b) => {
+                                            const posA = a.position !== undefined && a.position !== null ? a.position : 999;
+                                            const posB = b.position !== undefined && b.position !== null ? b.position : 999;
+                                            const sortA = posA === 0 ? 999 : posA;
+                                            const sortB = posB === 0 ? 999 : posB;
+                                            if (sortA !== sortB) return sortA - sortB;
+                                            return a.id - b.id;
+                                          })
+                                          .map(photo => (
+                                            <div key={photo.id} className="flex items-center justify-between bg-white/5 border border-white/5 rounded-lg p-1.5 hover:bg-white/10 transition-colors">
+                                              <div className="flex items-center gap-2 min-w-0">
+                                                <div className="w-6 h-6 rounded overflow-hidden border border-white/10 flex-shrink-0 bg-neutral-900">
+                                                  <img src={photo.url} alt="" className="w-full h-full object-cover" />
+                                                </div>
+                                                <span className="text-[10px] text-white font-medium truncate max-w-[120px]">{photo.title}</span>
+                                              </div>
+                                              <TablePositionInput 
+                                                photo={photo} 
+                                                photoList={photoList} 
+                                                onUpdatePhotos={onUpdatePhotos} 
+                                              />
+                                            </div>
+                                          ))}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               ))}
                             </div>
                           )}
                         </div>
 
-                        <div className="flex justify-between items-center mb-6">
-                          <h3 className="font-display text-xl font-bold uppercase tracking-wide text-white font-semibold">Gallery Images</h3>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                          <div className="flex items-center gap-4">
+                            <h3 className="font-display text-xl font-bold uppercase tracking-wide text-white font-semibold">Gallery Images</h3>
+                            <div className="flex items-center gap-2 bg-neutral-900/60 border border-white/10 rounded-xl px-3 py-1.5">
+                              <span className="text-[10px] text-[#8c8c8c] uppercase tracking-wider font-semibold">Filter:</span>
+                              <select
+                                value={filterCategory}
+                                onChange={(e) => setFilterCategory(e.target.value)}
+                                className="bg-transparent border-0 focus:ring-0 focus:outline-none text-xs text-white font-medium cursor-pointer"
+                              >
+                                <option value="All" className="bg-neutral-950">All Subsections</option>
+                                {subsections.map(sub => (
+                                  <option key={sub} value={sub} className="bg-neutral-950">{sub}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
                           <button
                             onClick={startAddPhoto}
                             className="flex items-center space-x-2 bg-white text-black px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-neutral-200 transition-colors"
@@ -1078,77 +1252,93 @@ export default function AdminPanel({
                                 <th className="p-4">Frame</th>
                                 <th className="p-4">Details</th>
                                 <th className="p-4">Category</th>
-                                <th className="p-4">Highlight</th>
+                                <th className="p-4 text-center">Highlight Pos</th>
                                 <th className="p-4">Size Grid</th>
+                                <th className="p-4 text-center">Gallery Pos</th>
                                 <th className="p-4 text-right">Actions</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5 font-light">
-                              {photoList.map(photo => (
-                                <tr key={photo.id} className="hover:bg-white/5 transition-colors">
-                                  <td className="p-4">
-                                    <div className="w-12 h-12 rounded-lg overflow-hidden border border-white/10 bg-neutral-900">
-                                      <img 
-                                        src={photo.url} 
-                                        alt={photo.title}
-                                        className="w-full h-full object-cover"
-                                        onError={(e) => {
-                                          e.target.style.display = 'none';
-                                        }}
-                                      />
-                                    </div>
-                                  </td>
-                                  <td className="p-4 text-white">
-                                    <span className="font-semibold block">{photo.title}</span>
-                                    <span className="text-[10px] text-[#8c8c8c] block mt-0.5">{photo.location}</span>
-                                  </td>
-                                  <td className="p-4">
-                                    <span className="px-2.5 py-1 bg-white/5 border border-white/10 text-white rounded-full text-[9px] uppercase tracking-wider font-semibold">
-                                      {photo.category}
-                                    </span>
-                                  </td>
-                                  <td className="p-4">
-                                    {photo.isHighlight === 1 ? (
-                                      <span className="px-2.5 py-0.5 bg-white text-black text-[9px] uppercase tracking-wider font-bold rounded">
-                                        Yes
+                              {photoList
+                                .filter(photo => filterCategory === 'All' || photo.category === filterCategory)
+                                .sort((a, b) => {
+                                  const posA = a.position !== undefined && a.position !== null ? a.position : 999;
+                                  const posB = b.position !== undefined && b.position !== null ? b.position : 999;
+                                  const sortA = posA === 0 ? 999 : posA;
+                                  const sortB = posB === 0 ? 999 : posB;
+                                  if (sortA !== sortB) return sortA - sortB;
+                                  return a.id - b.id;
+                                })
+                                .map(photo => (
+                                  <tr key={photo.id} className="hover:bg-white/5 transition-colors">
+                                    <td className="p-4">
+                                      <div className="w-12 h-12 rounded-lg overflow-hidden border border-white/10 bg-neutral-900">
+                                        <img 
+                                          src={photo.url} 
+                                          alt={photo.title}
+                                          className="w-full h-full object-cover"
+                                          onError={(e) => {
+                                            e.target.style.display = 'none';
+                                          }}
+                                        />
+                                      </div>
+                                    </td>
+                                    <td className="p-4 text-white">
+                                      <span className="font-semibold block">{photo.title}</span>
+                                      <span className="text-[10px] text-[#8c8c8c] block mt-0.5">{photo.location}</span>
+                                    </td>
+                                    <td className="p-4">
+                                      <span className="px-2.5 py-1 bg-white/5 border border-white/10 text-white rounded-full text-[9px] uppercase tracking-wider font-semibold">
+                                        {photo.category}
                                       </span>
-                                    ) : (
-                                      <span className="text-neutral-600 font-bold">-</span>
-                                    )}
-                                  </td>
-                                  <td className="p-4 font-mono text-[10px]">
-                                    {photo.sizeClass.includes('aspect-[16/9]') 
-                                      ? 'Landscape (16:9)' 
-                                      : photo.sizeClass.includes('aspect-[9/16]') 
-                                      ? 'Portrait (9:16)' 
-                                      : photo.sizeClass.includes('col-span-2') && photo.sizeClass.includes('row-span-2')
-                                      ? 'Large Featured'
-                                      : photo.sizeClass.includes('col-span-2') 
-                                      ? 'Double Width' 
-                                      : photo.sizeClass.includes('row-span-2') 
-                                      ? 'Double Height' 
-                                      : 'Standard'}
-                                  </td>
-                                  <td className="p-4 text-right">
-                                    <div className="flex justify-end items-center gap-2">
-                                      <button
-                                        onClick={() => startEditPhoto(photo)}
-                                        className="w-8 h-8 rounded-full border border-white/10 hover:border-white/30 flex items-center justify-center text-white/70 hover:text-white transition-colors"
-                                        title="Edit"
-                                      >
-                                        <Edit3 className="w-3.5 h-3.5" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeletePhoto(photo.id)}
-                                        className="w-8 h-8 rounded-full border border-white/10 hover:border-rose-500/30 flex items-center justify-center text-[#8c8c8c] hover:text-rose-500 transition-colors"
-                                        title="Delete"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
+                                    </td>
+                                    <td className="p-4 text-center">
+                                      <TableHighlightInput 
+                                        photo={photo} 
+                                        photoList={photoList} 
+                                        onUpdatePhotos={onUpdatePhotos} 
+                                      />
+                                    </td>
+                                    <td className="p-4 font-mono text-[10px]">
+                                      {photo.sizeClass.includes('aspect-[16/9]') 
+                                        ? 'Landscape (16:9)' 
+                                        : photo.sizeClass.includes('aspect-[9/16]') 
+                                        ? 'Portrait (9:16)' 
+                                        : photo.sizeClass.includes('col-span-2') && photo.sizeClass.includes('row-span-2')
+                                        ? 'Large Featured'
+                                        : photo.sizeClass.includes('col-span-2') 
+                                        ? 'Double Width' 
+                                        : photo.sizeClass.includes('row-span-2') 
+                                        ? 'Double Height' 
+                                        : 'Standard'}
+                                    </td>
+                                    <td className="p-4 text-center">
+                                      <TablePositionInput 
+                                        photo={photo} 
+                                        photoList={photoList} 
+                                        onUpdatePhotos={onUpdatePhotos} 
+                                      />
+                                    </td>
+                                    <td className="p-4 text-right">
+                                      <div className="flex justify-end items-center gap-2">
+                                        <button
+                                          onClick={() => startEditPhoto(photo)}
+                                          className="w-8 h-8 rounded-full border border-white/10 hover:border-white/30 flex items-center justify-center text-white/70 hover:text-white transition-colors"
+                                          title="Edit"
+                                        >
+                                          <Edit3 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeletePhoto(photo.id)}
+                                          className="w-8 h-8 rounded-full border border-white/10 hover:border-rose-500/30 flex items-center justify-center text-[#8c8c8c] hover:text-rose-500 transition-colors"
+                                          title="Delete"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
                             </tbody>
                           </table>
                         </div>
@@ -1172,18 +1362,36 @@ export default function AdminPanel({
                               />
                             </div>
                             <div className="space-y-2">
-                              <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold">Subsection (Category)</label>
-                              <select
-                                required
-                                value={photoForm.category}
-                                onChange={(e) => setPhotoForm({ ...photoForm, category: e.target.value })}
-                                className="w-full bg-neutral-900/60 border border-white/10 rounded-xl px-4 py-3.5 text-sm focus:border-white focus:outline-none text-white font-light tracking-wide transition-colors"
-                              >
-                                <option value="" disabled>Select a Subsection</option>
-                                {subsections.map(sub => (
-                                  <option key={sub} value={sub}>{sub}</option>
-                                ))}
-                              </select>
+                              <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold">Subsection Category & Position</label>
+                              <div className="flex items-center gap-3 bg-neutral-900/40 border border-white/10 rounded-xl px-4 py-1.5 h-[50px]">
+                                <div className="flex-1">
+                                  <select
+                                    required
+                                    value={photoForm.category}
+                                    onChange={(e) => setPhotoForm({ ...photoForm, category: e.target.value })}
+                                    className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none text-xs text-white font-medium select-none cursor-pointer"
+                                  >
+                                    <option value="" disabled className="bg-neutral-950">Select Category</option>
+                                    {subsections.map(sub => (
+                                      <option key={sub} value={sub} className="bg-neutral-950">{sub}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="flex items-center space-x-2 ml-auto">
+                                  <span className="text-[10px] text-[#8c8c8c] uppercase font-semibold">Position:</span>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={999}
+                                    value={photoForm.position !== undefined && photoForm.position !== null ? photoForm.position : ''}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value, 10);
+                                      setPhotoForm({ ...photoForm, position: isNaN(val) ? 0 : val });
+                                    }}
+                                    className="w-16 bg-neutral-950 border border-white/10 rounded px-2 py-1 text-xs text-center text-white focus:outline-none focus:border-white font-mono"
+                                  />
+                                </div>
+                              </div>
                             </div>
                             <div className="space-y-2">
                               <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold">Location</label>
@@ -1222,18 +1430,38 @@ export default function AdminPanel({
                                 <option value="md:col-span-1 aspect-[9/16] h-auto">Portrait Card (9:16)</option>
                               </select>
                             </div>
-                            <div className="space-y-2 flex flex-col justify-end">
-                              <div className="flex items-center space-x-3 bg-neutral-900/40 border border-white/10 rounded-xl px-4 py-3 h-[46px]">
-                                <input
-                                  type="checkbox"
-                                  id="isHighlight"
-                                  checked={photoForm.isHighlight === 1}
-                                  onChange={(e) => setPhotoForm({ ...photoForm, isHighlight: e.target.checked ? 1 : 0 })}
-                                  className="w-4 h-4 bg-neutral-950 border-white/10 rounded focus:ring-0 focus:ring-offset-0 text-white cursor-pointer"
-                                />
-                                <label htmlFor="isHighlight" className="text-xs text-white cursor-pointer font-medium select-none">
-                                  Showcase in Highlights
+                            <div className="space-y-2">
+                              <label className="text-[10px] tracking-widest text-[#8c8c8c] uppercase font-semibold">Highlights Setting</label>
+                              <div className="flex items-center gap-3 bg-neutral-900/40 border border-white/10 rounded-xl px-4 py-1.5 h-[50px]">
+                                <label htmlFor="isHighlight" className="flex items-center space-x-2.5 text-xs text-white cursor-pointer font-medium select-none">
+                                  <input
+                                    type="checkbox"
+                                    id="isHighlight"
+                                    checked={photoForm.isHighlight > 0}
+                                    onChange={(e) => {
+                                      const isChecked = e.target.checked;
+                                      setPhotoForm({ ...photoForm, isHighlight: isChecked ? 1 : 0 });
+                                    }}
+                                    className="w-4 h-4 bg-neutral-950 border-white/10 rounded focus:ring-0 focus:ring-offset-0 text-white cursor-pointer"
+                                  />
+                                  <span>Showcase in Highlights</span>
                                 </label>
+                                {photoForm.isHighlight > 0 && (
+                                  <div className="flex items-center space-x-2 ml-auto">
+                                    <span className="text-[10px] text-[#8c8c8c] uppercase font-semibold">Position:</span>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      max={50}
+                                      value={photoForm.isHighlight}
+                                      onChange={(e) => {
+                                        const val = parseInt(e.target.value, 10) || 1;
+                                        setPhotoForm({ ...photoForm, isHighlight: Math.max(1, val) });
+                                      }}
+                                      className="w-14 bg-neutral-950 border border-white/10 rounded px-2 py-1 text-xs text-center text-white focus:outline-none focus:border-white font-mono"
+                                    />
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
