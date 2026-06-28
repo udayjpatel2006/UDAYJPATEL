@@ -138,6 +138,6 @@ Vercel is a serverless hosting provider that runs on an ephemeral (temporary) fi
 
 ### ⚙️ Vercel Import Steps
 1. Log in to [Vercel](https://vercel.com/) and click **Add New** -> **Project**.
-2. Select your repository: `udayjpatel-portfolio`.
+2. Select your repository: `Portfolio`.
 3. Vercel will automatically parse the `vercel.json` file.
 4. Click **Deploy**. Your site will be online in about 1-2 minutes!
