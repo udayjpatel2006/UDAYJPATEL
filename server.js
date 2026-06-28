@@ -173,7 +173,18 @@ async function migrateBase64ToFiles(db) {
 }
 
 async function initDb() {
-  const dbPath = path.join(__dirname, 'database.sqlite');
+  let dbPath = path.join(__dirname, 'database.sqlite');
+  
+  if (process.env.VERCEL) {
+    const tmpDbPath = path.join('/tmp', 'database.sqlite');
+    try {
+      console.log(`[VERCEL] Copying database.sqlite to /tmp...`);
+      fs.copyFileSync(dbPath, tmpDbPath);
+      dbPath = tmpDbPath;
+    } catch (copyErr) {
+      console.error(`[VERCEL ERROR] Failed to copy database.sqlite to /tmp:`, copyErr);
+    }
+  }
   
   db = await open({
     filename: dbPath,
