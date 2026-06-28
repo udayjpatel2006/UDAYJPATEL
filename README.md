@@ -97,7 +97,11 @@ graph TD
 Install [Node.js](https://nodejs.org/) (v18+ recommended).
 
 ### 🔧 Installation
-1. Clone the repository and navigate to the project root.
+1. Clone the repository and navigate to the project root:
+   ```bash
+   git clone https://github.com/udayjpatel2006/UDAYJPATEL.git
+   cd UDAYJPATEL
+   ```
 2. Install all dependencies:
    ```bash
    npm install
@@ -138,6 +142,6 @@ Vercel is a serverless hosting provider that runs on an ephemeral (temporary) fi
 
 ### ⚙️ Vercel Import Steps
 1. Log in to [Vercel](https://vercel.com/) and click **Add New** -> **Project**.
-2. Select your repository: `Portfolio`.
+2. Select your repository: `UDAYJPATEL`.
 3. Vercel will automatically parse the `vercel.json` file.
 4. Click **Deploy**. Your site will be online in about 1-2 minutes!
