@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, Sparkles, Send, Lock } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 import Hero from './components/Hero';
 import CinematicTextReveal from './components/CinematicTextReveal';
 import PhotoGrid, { PHOTO_DATA } from './components/PhotoGrid';
@@ -626,6 +627,9 @@ export default function App() {
           onLogout={handleLogout}
         />
       )}
+      
+      {/* Vercel Web Analytics */}
+      <Analytics />
     </div>
   );
 }
