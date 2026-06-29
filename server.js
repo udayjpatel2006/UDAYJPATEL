@@ -101,19 +101,25 @@ app.use(async (req, res, next) => {
   }
 });
 
+// No-cache header middleware to prevent stale loads - MUST be defined before static serving to ensure index.html and documents are never cached
+app.use((req, res, next) => {
+  // Prevent caching for HTML documents and API endpoints
+  if (req.path === '/' || req.path.endsWith('.html') || req.path.startsWith('/api')) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  } else {
+    // Hashed assets under dist/assets can be cached safely for 1 year
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+  next();
+});
+
 // Serve uploaded images from 'uploads' directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Serve static assets from 'dist' in production
 app.use(express.static(path.join(__dirname, 'dist')));
-
-// No-cache header middleware to prevent stale loads
-app.use((req, res, next) => {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  next();
-});
 
 let db;
 let dbInitPromise;
