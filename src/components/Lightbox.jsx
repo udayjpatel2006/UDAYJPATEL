@@ -124,12 +124,12 @@ export default function Lightbox({ photo, onClose, onPrev, onNext, artistName = 
           className="relative w-full overflow-y-auto md:overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 flex flex-col md:flex-row shadow-2xl max-h-[85vh] md:max-h-none"
         >
           {/* Left Side: Photo Frame with watermark and overlay protection */}
-          <div className="relative flex-1 bg-neutral-950 flex items-center justify-center h-[50vh] md:h-[65vh] overflow-hidden select-none">
+          <div className="relative flex-1 bg-neutral-950 flex items-center justify-center h-[60vh] md:h-[65vh] overflow-hidden select-none">
             <div className="relative inline-block max-h-full max-w-full">
               <img
                 src={photo.url}
                 alt={photo.title}
-                className="max-h-[50vh] md:max-h-[65vh] max-w-full object-contain block filter contrast-[1.05] pointer-events-none select-none"
+                className="max-h-[60vh] md:max-h-[65vh] max-w-full object-contain block filter contrast-[1.05] pointer-events-none select-none"
               />
               {/* Transparent protection overlay */}
               <div className="absolute inset-0 z-10 bg-transparent pointer-events-auto" />
@@ -146,36 +146,36 @@ export default function Lightbox({ photo, onClose, onPrev, onNext, artistName = 
             exit={{ opacity: 0, x: 20 }}
             transition={{ delay: 0.05, duration: 0.25 }}
             style={{ willChange: 'transform, opacity' }}
-            className="w-full md:w-80 p-5 md:p-8 flex flex-col justify-between bg-neutral-950 border-t md:border-t-0 md:border-l border-white/10"
+            className="w-full md:w-80 px-4 py-3 md:p-8 flex flex-col justify-between bg-neutral-950 border-t md:border-t-0 md:border-l border-white/10"
           >
             {/* Upper details */}
-            <div className="space-y-4 md:space-y-6">
+            <div className="space-y-2 md:space-y-6">
               <div>
-                <span className="text-[10px] font-semibold tracking-[0.25em] text-[#8c8c8c] uppercase block mb-1 md:mb-2">
+                <span className="text-[9px] md:text-[10px] font-semibold tracking-[0.25em] text-[#8c8c8c] uppercase block mb-0.5 md:mb-2">
                   {photo.category}
                 </span>
-                <h3 className="font-display text-lg md:text-2xl font-bold tracking-tight text-white leading-tight">
+                <h3 className="font-display text-base md:text-2xl font-bold tracking-tight text-white leading-tight">
                   {photo.title}
                 </h3>
               </div>
 
-              <div className="space-y-2 md:space-y-3 pt-3 md:pt-4 border-t border-white/5">
-                <div className="flex items-center space-x-3 text-xs text-[#8c8c8c]">
-                  <MapPin className="w-4 h-4 text-white/40" />
+              <div className="space-y-1.5 md:space-y-3 pt-2 md:pt-4 border-t border-white/5">
+                <div className="flex items-center space-x-2 md:space-x-3 text-[11px] md:text-xs text-[#8c8c8c]">
+                  <MapPin className="w-3.5 h-3.5 text-white/40" />
                   <span>{photo.location}</span>
                 </div>
-                <div className="flex items-center space-x-3 text-xs text-[#8c8c8c]">
-                  <Compass className="w-4 h-4 text-white/40" />
+                <div className="flex items-center space-x-2 md:space-x-3 text-[11px] md:text-xs text-[#8c8c8c]">
+                  <Compass className="w-3.5 h-3.5 text-white/40" />
                   <span>Original Print Available</span>
                 </div>
               </div>
             </div>
 
             {/* Lower Details - Camera Settings */}
-            <div className="mt-4 md:mt-8 pt-4 md:pt-6 border-t border-white/5 space-y-3 md:space-y-4">
+            <div className="mt-2 md:mt-8 pt-2 md:pt-6 border-t border-white/5 space-y-2 md:space-y-4">
               <div>
-                <span className="text-[9px] font-semibold tracking-widest text-[#8c8c8c] uppercase block mb-1">EXIF DATA</span>
-                <span className="text-xs font-mono text-white/80">{photo.settings}</span>
+                <span className="text-[8px] md:text-[9px] font-semibold tracking-widest text-[#8c8c8c] uppercase block mb-0.5">EXIF DATA</span>
+                <span className="text-[11px] md:text-xs font-mono text-white/80">{photo.settings}</span>
               </div>
 
 
