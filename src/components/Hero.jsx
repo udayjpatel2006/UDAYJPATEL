@@ -149,7 +149,9 @@ export default function Hero({ profileData = {} }) {
 
         {/* Right Column: Visual Frame with overlay protection */}
         <div 
-          onTouchStart={() => {}}
+          onTouchStart={(e) => e.currentTarget.classList.add('active-touch')}
+          onTouchEnd={(e) => e.currentTarget.classList.remove('active-touch')}
+          onTouchCancel={(e) => e.currentTarget.classList.remove('active-touch')}
           className="lg:col-span-5 relative w-full h-[300px] sm:h-[400px] lg:h-[550px] overflow-hidden rounded-2xl border border-white/10 group select-none"
         >
           {/* Decorative frame overlay */}

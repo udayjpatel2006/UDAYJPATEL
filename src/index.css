@@ -76,6 +76,7 @@ img {
   user-select: none !important;
   -webkit-user-drag: none !important;
   pointer-events: none !important;
+  -webkit-touch-callout: none !important; /* Prevents long-press preview callout on iOS */
 }
 
 /* Gallery image performance optimizations and smooth transitions */
@@ -85,10 +86,11 @@ img {
   transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), filter 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Color reveal and scale effect on hover and active touch states */
+/* Color reveal and scale effect on hover, active touch, and focus states */
 .group:hover .gallery-image-hover-effect,
 .group:active .gallery-image-hover-effect,
-.group:focus .gallery-image-hover-effect {
+.group:focus .gallery-image-hover-effect,
+.active-touch .gallery-image-hover-effect {
   transform: scale(1.05);
   filter: none !important;
 }
